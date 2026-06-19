@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TXD 擇時槓桿儀表 — 分級順勢 × MOVE × DTP 高波動關機</title>
-<script defer src="vendor/chart.min.js"></script>
 <link rel="preload" href="fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:"JetBrains Mono Web";src:url("fonts/jetbrains-mono.woff2") format("woff2");font-weight:100 800;font-display:swap;font-style:normal}
@@ -544,10 +543,12 @@ let SIG,NAV,MET,HLT;
 // (CF 設 must-revalidate → 每次條件式 GET,資料變了拿新、沒變回 304;既新鮮又省頻寬,重訪極快)。
 const J=u=>fetch(u).then(r=>r.json());
 const paint=()=>{if(SIG)try{render()}catch(e){console.error('render',e)}};
-// signal 先到先畫上半部訊號卡(小、快 → LCP);nav/metrics/health 是下半圖表,後到再補。
+// Chart.js(164KB)延後到圖表真的要畫時才載入 → 不卡首屏關鍵渲染(parse 164KB 會阻塞主執行緒、拖慢 LCP)。
+const loadChart=()=>window.Chart?Promise.resolve():new Promise(r=>{const s=document.createElement('script');s.src='vendor/chart.min.js';s.onload=r;s.onerror=r;document.head.appendChild(s);});
+// signal 先到先畫上半部訊號卡(SVG 錶,不需 Chart.js → LCP 極快);nav/metrics/health 是下半圖表,載 Chart.js 後再補。
 J('data/signal.json').then(s=>{SIG=s;paint();}).catch(e=>{$('#banner').style.display='block';$('#banner').textContent='資料載入失敗:'+e});
 Promise.all([J('data/nav.json'),J('data/metrics.json').catch(()=>null),J('data/health.json').catch(()=>null)])
- .then(([n,m,h])=>{NAV=n;MET=m;HLT=h;paint();}).catch(()=>{});
+ .then(([n,m,h])=>{NAV=n;MET=m;HLT=h;loadChart().then(paint);}).catch(()=>{});
 
 /* ── gauge:0~2x 映射到 -100°..100° ── */
 const A0=-100,A1=100, ang=e=>A0+(A1-A0)*(e/2);
