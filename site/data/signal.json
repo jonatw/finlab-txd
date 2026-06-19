@@ -1,8 +1,9 @@
 {
   "px_as_of": "2026-06-18",
   "move_as_of": "2026-06-17",
-  "for_session": "2026-06-19",
-  "for_session_approx": true,
+  "for_session": "2026-06-22",
+  "for_session_weekday": "週一",
+  "for_session_approx": false,
   "target_exposure": 2.0,
   "prev_exposure": 2.0,
   "changed": false,
@@ -52,5 +53,5 @@
     "stale_warn": false,
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日"
   },
-  "generated_at": "2026-06-19T17:35:49"
+  "generated_at": "2026-06-19T13:27:52"
 }

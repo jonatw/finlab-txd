@@ -569,8 +569,9 @@ function render(){
   if(lag>4){$('#banner').style.display='block';$('#banner').textContent=`⚠️ 資料停在 ${SIG.px_as_of}(${lag} 天前),管線可能未更新,勿據此操作`;}
 
   /* 駕駛艙 */
-  $('#forsess').textContent=SIG.for_session+(SIG.for_session_approx?'(次一交易日)':'');
-  $('#forsess2').textContent=SIG.for_session+(SIG.for_session_approx?'(次一交易日)':'');
+  const _fs=SIG.for_session+(SIG.for_session_weekday?'（'+SIG.for_session_weekday+'）':'')+(SIG.for_session_approx?' ≈':'');
+  $('#forsess').textContent=_fs;
+  $('#forsess2').textContent=_fs;
   $('#postext').textContent=SIG.pos_text;
   requestAnimationFrame(()=>setNeedle($('#needle'),SIG.target_exposure));
   const ac=$('#actline');

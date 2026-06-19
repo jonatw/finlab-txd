@@ -11,6 +11,24 @@ import numpy as np
 import pandas as pd
 from src.strategy import ATR_WIN, DTP_LOOKBACK, DTP_THRESH
 from src.config import PAPER_DEPLOY_DATE, PAPER_STAGE, PAPER_LANE_HEALTH
+import exchange_calendars as xcals
+
+_WEEKDAY_TW = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"]
+
+
+def _next_trading_session(ref):
+    """ref 之後第一個 TWSE 真實交易日(認台股假期,如端午/中秋/農曆年);失敗 fallback BDay(1)。
+    回 (Timestamp, 週幾, 是否精確)。避免把假期當下單日(降信度)。"""
+    try:
+        s = xcals.get_calendar("XTAI").sessions_in_range(
+            ref + pd.Timedelta(days=1), ref + pd.Timedelta(days=30))
+        if len(s):
+            d = pd.Timestamp(s[0])
+            return d, _WEEKDAY_TW[d.weekday()], True
+    except Exception:
+        pass
+    d = ref + pd.offsets.BDay(1)
+    return d, _WEEKDAY_TW[d.weekday()], False
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
@@ -51,7 +69,7 @@ def main():
 
     move_as_of = min(pd.Timestamp(move_df.index[-1]), ref)
     move_lag = max(int(np.busday_count(pd.Timestamp(move_df.index[-1]).date(), ref.date())), 0)
-    for_session = ref + pd.offsets.BDay(1)
+    for_session, for_session_wd, fs_exact = _next_trading_session(ref)
     exp_sig = cv["exposure"]
     exp_held = exp_sig.shift(1).fillna(0.0)
     target = 0.0 if gated_next else float(exp_sig.iloc[-1])
@@ -61,7 +79,7 @@ def main():
 
     signal = {
         "px_as_of": str(ref.date()), "move_as_of": str(move_as_of.date()),
-        "for_session": str(for_session.date()), "for_session_approx": True,
+        "for_session": str(for_session.date()), "for_session_weekday": for_session_wd, "for_session_approx": not fs_exact,
         "target_exposure": round(target, 2), "prev_exposure": round(prev, 2),
         "changed": changed, "action": action,
         "pos_text": ("🚨 高波動關機 / 空手" if gated_next else POS_TXT.get(round(target), f"{target:.2f}x 做多")),
