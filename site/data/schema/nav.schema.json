@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://txd.av8r.tw/data/schema/nav.schema.json",
+  "title": "TXD NAV curve",
+  "type": "object",
+  "required": ["updated", "series"],
+  "properties": {
+    "updated": { "type": "string", "format": "date" },
+    "haircut_note": { "type": "string" },
+    "benchmark_note": { "type": "string" },
+    "dtp_note": { "type": "string" },
+    "etf_note": { "type": "string" },
+    "series": {
+      "type": "object",
+      "required": ["date", "nav", "benchmark", "exposure_signal", "exposure_held", "dtp_gated"],
+      "description": "等長平行陣列(以 date 為時間軸,1999 起)。",
+      "properties": {
+        "date": { "type": "array", "items": { "type": "string", "format": "date" } },
+        "nav": { "type": "array", "items": { "type": "number" }, "description": "策略累積淨值(起點=1)" },
+        "benchmark": { "type": "array", "items": { "type": "number" }, "description": "加權指數 buy&hold(不含息)" },
+        "exposure_signal": { "type": "array", "items": { "type": "number" } },
+        "exposure_held": { "type": "array", "items": { "type": "number" }, "description": "= signal.shift(1) 實際持倉" },
+        "move_mult": { "type": "array", "items": { "type": "number" } },
+        "dtp_gated": { "type": "array", "items": { "type": "integer", "enum": [0, 1] } },
+        "etf_0050": { "type": "array", "items": { "type": ["number", "null"] }, "description": "還原含息;上市前為 null" },
+        "etf_0056": { "type": "array", "items": { "type": ["number", "null"] } },
+        "etf_00631L": { "type": "array", "items": { "type": ["number", "null"] } }
+      }
+    }
+  }
+}

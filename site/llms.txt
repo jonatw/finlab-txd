@@ -16,6 +16,12 @@
 - [NAV 曲線](https://txd.av8r.tw/data/nav.json):1999 起 strategy/benchmark/exposure/pnl/nav + 0050/0056/00631L 還原含息對照。
 - [指標時序](https://txd.av8r.tw/data/metrics.json):滾動窗(全期/2016/OOS/1年)Sharpe / CAGR / MaxDD。
 - [health 監控](https://txd.av8r.tw/data/health.json):paper-lane 實單 vs block-bootstrap 期望帶 + 回撤斷路器。
+- [通知 feed](https://txd.av8r.tw/feed.json):JSON Feed 1.1,每交易日一則訊號(最後 60 則),可訂閱輪詢。
+
+## API discovery(機器入口)
+- [OpenAPI 3.1](https://txd.av8r.tw/openapi.json):所有端點 + schema 參照。
+- [API catalog](https://txd.av8r.tw/.well-known/api-catalog):RFC 9727 linkset 機器入口。
+- [JSON Schema](https://txd.av8r.tw/data/schema/signal.schema.json):signal / nav / metrics / health 各有 schema(同目錄)。
 
 ## 怎麼用訊號(給 agent)
 - 讀 `signal.json`。`target_exposure` ∈ {0, 0.33, 0.67, 1.0, 2.0} = 今日 TX 目標槓桿。

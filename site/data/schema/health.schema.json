@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://txd.av8r.tw/data/schema/health.schema.json",
+  "title": "TXD paper-lane health",
+  "type": "object",
+  "required": ["updated", "deploy_date", "horizon", "p5", "p50", "p95", "live_nav", "dd"],
+  "description": "A. 實單 vs block-bootstrap 期望帶(p5..p95,長度=horizon);B. 回撤斷路器。",
+  "properties": {
+    "updated": { "type": "string", "format": "date" },
+    "deploy_date": { "type": "string", "format": "date", "description": "paper-lane 起算日" },
+    "horizon": { "type": "integer", "description": "期望帶天數(交易日)" },
+    "p5": { "type": "array", "items": { "type": "number" } },
+    "p25": { "type": "array", "items": { "type": "number" } },
+    "p50": { "type": "array", "items": { "type": "number" }, "description": "回測中位累積路徑" },
+    "p75": { "type": "array", "items": { "type": "number" } },
+    "p95": { "type": "array", "items": { "type": "number" } },
+    "live_nav": { "type": "array", "items": { "type": "number" }, "description": "deploy 後實際 NAV(起點正規化=1);初期可能為空" },
+    "live_dates": { "type": "array", "items": { "type": "string", "format": "date" } },
+    "dd": {
+      "type": "object",
+      "required": ["current_pct", "mdd_full_pct"],
+      "properties": {
+        "current_pct": { "type": "number", "description": "當前回撤 %" },
+        "mdd_2016_pct": { "type": "number" },
+        "mdd_full_pct": { "type": "number", "description": "全期歷史最深回撤;當前回撤破此 = 斷路警報" },
+        "tail_mdd_pct": { "type": "number", "description": "bootstrap 估『典型一年內』最深回撤(5% 尾)" }
+      }
+    }
+  }
+}

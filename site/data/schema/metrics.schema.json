@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://txd.av8r.tw/data/schema/metrics.schema.json",
+  "title": "TXD rolling metrics time series",
+  "type": "object",
+  "required": ["updated", "date", "sharpe_full", "sharpe_2016", "sharpe_oos2022", "sharpe_1y"],
+  "description": "等長平行陣列;各窗口『截至每日』的 Sharpe(凍結策略下的指標漂移,非效能監控)。",
+  "properties": {
+    "updated": { "type": "string", "format": "date" },
+    "date": { "type": "array", "items": { "type": "string", "format": "date" } },
+    "sharpe_full": { "type": "array", "items": { "type": ["number", "null"] }, "description": "全期(1999~)expanding;被歷史錨住、偵測不到衰退" },
+    "sharpe_2016": { "type": "array", "items": { "type": ["number", "null"] } },
+    "sharpe_oos2022": { "type": "array", "items": { "type": ["number", "null"] } },
+    "sharpe_1y": { "type": "array", "items": { "type": ["number", "null"] }, "description": "滾動 252 日;會大幅擺盪、多為窗口換血" }
+  }
+}

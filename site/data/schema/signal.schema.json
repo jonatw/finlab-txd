@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://txd.av8r.tw/data/schema/signal.schema.json",
+  "title": "TXD daily signal",
+  "type": "object",
+  "required": ["px_as_of", "for_session", "target_exposure", "changed", "action", "pos_text", "spine", "move", "dtp", "status", "freshness", "generated_at"],
+  "properties": {
+    "px_as_of": { "type": "string", "format": "date", "description": "台股收盤資料截止日(訊號的事實來源)" },
+    "move_as_of": { "type": "string", "format": "date" },
+    "for_session": { "type": "string", "format": "date", "description": "此訊號對應的交易日(次一交易日)" },
+    "for_session_approx": { "type": "boolean" },
+    "target_exposure": { "type": "number", "minimum": 0, "maximum": 2, "description": "spine(0/.33/.67/1)× lev(1或2)× DTP閘(關機=0);例 0, 0.33, 0.67, 1.0, 2.0" },
+    "prev_exposure": { "type": "number" },
+    "changed": { "type": "boolean", "description": "true ⇒ 今日需調倉" },
+    "action": { "type": "string", "description": "人看的指示,例「不需調倉」「加碼」「減碼」" },
+    "pos_text": { "type": "string" },
+    "spine": {
+      "type": "object",
+      "required": ["value", "index_close", "n_above"],
+      "properties": {
+        "value": { "type": "number" },
+        "index_close": { "type": "number" },
+        "ma": { "type": "object" },
+        "above_ma": { "type": "array", "items": { "type": "integer" } },
+        "n_above": { "type": "integer", "minimum": 0, "maximum": 3 }
+      }
+    },
+    "move": {
+      "type": "object",
+      "required": ["value", "median252", "mult"],
+      "properties": {
+        "value": { "type": "number" },
+        "median252": { "type": "number" },
+        "regime": { "type": "string" },
+        "mult": { "type": "number", "enum": [1, 2] }
+      }
+    },
+    "dtp": {
+      "type": "object",
+      "required": ["percentile", "gated_next"],
+      "properties": {
+        "percentile": { "type": "number" },
+        "atr_pct": { "type": "number" },
+        "threshold_pct": { "type": "integer" },
+        "gated_next": { "type": "boolean", "description": "true = 次一交易日高波動關機、空手" },
+        "regime": { "type": "string" }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "stage": { "type": "string" },
+        "lane_health": { "type": "string" },
+        "deploy_date": { "type": ["string", "null"] }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "required": ["stale_warn"],
+      "properties": {
+        "stale_warn": { "type": "boolean", "description": "true = 曲線尚未重生到最新交易日,當暫定值" },
+        "curve_stale": { "type": "boolean" },
+        "move_lag_bdays": { "type": "integer" }
+      }
+    },
+    "generated_at": { "type": "string", "format": "date-time" }
+  }
+}

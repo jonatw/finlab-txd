@@ -1,0 +1,52 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TXD Dashboard Data API",
+    "version": "1.0.0",
+    "description": "Read-only daily Taiwan-index-futures (台指期/TX) timing signal + backtest curve + rolling metrics + paper-lane health. Static JSON on Cloudflare Pages, CORS-open, regenerated daily (~14:30 Taipei) by a GitHub Action. NOT investment advice. Additive-only changes within major version 1.",
+    "contact": { "url": "https://github.com/jonatw/finlab-txd" },
+    "license": { "name": "MIT" }
+  },
+  "servers": [{ "url": "https://txd.av8r.tw" }],
+  "paths": {
+    "/data/signal.json": {
+      "get": {
+        "operationId": "getSignal",
+        "summary": "今日目標槓桿 + spine/MOVE/DTP 狀態。poll 此檔;看 changed 旗標決定是否調倉。",
+        "responses": { "200": { "description": "OK", "content": { "application/json": {
+          "schema": { "$ref": "https://txd.av8r.tw/data/schema/signal.schema.json" } } } } }
+      }
+    },
+    "/data/nav.json": {
+      "get": {
+        "operationId": "getNav",
+        "summary": "1999 起完整 NAV 曲線 + 0050/0056/00631L 還原含息對照(~393KB)。",
+        "responses": { "200": { "description": "OK", "content": { "application/json": {
+          "schema": { "$ref": "https://txd.av8r.tw/data/schema/nav.schema.json" } } } } }
+      }
+    },
+    "/data/metrics.json": {
+      "get": {
+        "operationId": "getMetrics",
+        "summary": "滾動窗 Sharpe/CAGR/MaxDD 時序(指標漂移,非效能監控)。",
+        "responses": { "200": { "description": "OK", "content": { "application/json": {
+          "schema": { "$ref": "https://txd.av8r.tw/data/schema/metrics.schema.json" } } } } }
+      }
+    },
+    "/data/health.json": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "paper-lane 實單 vs block-bootstrap 期望帶 + 回撤斷路器。",
+        "responses": { "200": { "description": "OK", "content": { "application/json": {
+          "schema": { "$ref": "https://txd.av8r.tw/data/schema/health.schema.json" } } } } }
+      }
+    },
+    "/feed.json": {
+      "get": {
+        "operationId": "getFeed",
+        "summary": "JSON Feed 1.1:每交易日一則訊號(最後 60 則),可訂閱輪詢。",
+        "responses": { "200": { "description": "OK", "content": { "application/feed+json": {} } } }
+      }
+    }
+  }
+}

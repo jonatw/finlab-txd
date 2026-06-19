@@ -1,0 +1,20 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://txd.av8r.tw/",
+      "service-desc": [
+        { "href": "https://txd.av8r.tw/openapi.json", "type": "application/openapi+json", "title": "OpenAPI 3.1 spec" }
+      ],
+      "service-doc": [
+        { "href": "https://txd.av8r.tw/llms.txt", "type": "text/markdown", "title": "LLM index" }
+      ],
+      "service-meta": [
+        { "href": "https://txd.av8r.tw/data/signal.json", "title": "today's signal" },
+        { "href": "https://txd.av8r.tw/data/nav.json", "title": "NAV curve" },
+        { "href": "https://txd.av8r.tw/data/metrics.json", "title": "rolling metrics" },
+        { "href": "https://txd.av8r.tw/data/health.json", "title": "paper-lane health" },
+        { "href": "https://txd.av8r.tw/feed.json", "type": "application/feed+json", "title": "JSON Feed" }
+      ]
+    }
+  ]
+}
