@@ -783,13 +783,20 @@ function drawCharts(r='all',customStart=null){
   else if(r!=='all'&&r!=='custom'){const y=parseInt(r,10);if(y>0)s=date.length-252*y;}
   if(r==='custom'&&customStart){s=date.findIndex(d=>d>=customStart);if(s<0)s=0;}
   s=Math.max(0,s);
-  const D=date.slice(s),N=nav.slice(s),B=benchmark.slice(s),E=exposure_held.slice(s),n0=N[0],b0=B[0];
+  let D=date.slice(s),N=nav.slice(s),B=benchmark.slice(s),E=exposure_held.slice(s);
+  // 降採樣:圖寬 ~900px,>1100 點無視覺增益、徒增 Chart.js 主執行緒成本(TBT)。
+  // 等距抽樣(保頭尾);所有線共用同一組索引才對齊。
+  let IX=null;
+  if(D.length>1100){const st=(D.length-1)/1099;IX=[];for(let i=0;i<1100;i++)IX.push(Math.round(i*st));IX[1099]=D.length-1;}
+  const dn=a=>IX?IX.map(i=>a[i]):a;
+  D=dn(D);N=dn(N);B=dn(B);E=dn(E);
+  const n0=N[0],b0=B[0];
   if(chN)chN.destroy();if(chE)chE.destroy();
   // 存股對照線: 窗口起點在上市前 → 不畫不硬接(避免「從 1.0 起跑」的假比較)
   const etfDS=[];
   [['etf_0050','存0050(含息)','#7d96c9'],['etf_0056','存0056(含息)','#6fa98c'],['etf_00631L','正2 00631L(無腦2x)','#b07d7d']].forEach(([k,lab,col])=>{
     const full=NAV.series[k];if(!full)return;
-    const seg=full.slice(s), e0=seg[0];
+    const seg=dn(full.slice(s)), e0=seg[0];
     if(e0==null)return;
     etfDS.push({label:lab,data:seg.map(v=>v==null?null:v/e0),borderColor:col,borderWidth:1,borderDash:[4,3],pointRadius:0});});
   // MOVE 採用線: 2003-06 起 2x 加碼層生效(視窗起點晚於它時不畫)
@@ -819,8 +826,11 @@ let chS;
 function buildSharpe(){
   if(!MET||!MET.date){const el=$('#shnote');if(el)el.textContent='監控資料尚未生成(metrics.json)';return;}
   if(chS)chS.destroy();
-  const ds=(key,lab,col,dash)=>({label:lab,data:MET[key],borderColor:col,borderWidth:1.4,borderDash:dash||[],pointRadius:0,spanGaps:true});
-  chS=new Chart($('#shchart'),{type:'line',data:{labels:MET.date,datasets:[
+  let SIX=null;const L=MET.date.length;
+  if(L>1100){const st=(L-1)/1099;SIX=[];for(let i=0;i<1100;i++)SIX.push(Math.round(i*st));SIX[1099]=L-1;}
+  const sdn=a=>SIX&&a?SIX.map(i=>a[i]):a;
+  const ds=(key,lab,col,dash)=>({label:lab,data:sdn(MET[key]),borderColor:col,borderWidth:1.4,borderDash:dash||[],pointRadius:0,spanGaps:true});
+  chS=new Chart($('#shchart'),{type:'line',data:{labels:sdn(MET.date),datasets:[
     ds('sharpe_full','全期(1999~)','#8e99a8'),
     ds('sharpe_2016','2016~(招牌)','#ffb454'),
     ds('sharpe_oos2022','OOS(2022~)','#7fd4e4'),
