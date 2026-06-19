@@ -22,6 +22,7 @@
 - [OpenAPI 3.1](https://txd.av8r.tw/openapi.json):所有端點 + schema 參照。
 - [API catalog](https://txd.av8r.tw/.well-known/api-catalog):RFC 9727 linkset 機器入口。
 - [JSON Schema](https://txd.av8r.tw/data/schema/signal.schema.json):signal / nav / metrics / health 各有 schema(同目錄)。
+- **MCP**(給 tool-calling agent):`https://txd.av8r.tw/mcp` — stateless Streamable HTTP / JSON-RPC 2.0(spec 2025-06-18),工具 `get_signal` / `get_metrics` / `get_health` / `get_nav`。read-only。
 
 ## 怎麼用訊號(給 agent)
 - 讀 `signal.json`。`target_exposure` ∈ {0, 0.33, 0.67, 1.0, 2.0} = 今日 TX 目標槓桿。
