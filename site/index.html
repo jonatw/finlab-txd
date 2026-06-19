@@ -569,7 +569,7 @@ function render(){
   try{buildGauge()}catch(e){console.error('gauge',e)}
   try{buildSharpe()}catch(e){console.error('sharpe',e)}
   try{buildHealth()}catch(e){console.error('health',e)}
-  if(NAV)$('#upd').textContent='資料更新至 '+NAV.updated;
+  $('#upd').textContent='資料更新至 '+(NAV?NAV.updated:SIG.px_as_of);  // 第一輪就填(占位)→ 不留空再長 → 不位移(CLS/LCP)
   $('#dep').textContent=SIG.status.deploy_date||'—';
   $('#lanepill').textContent=`paper-lane ${SIG.status.lane_health}`;
   if(SIG.status.stage==='RETIRED'){$('#retired').style.display='block';$('#sigcard').style.opacity=.6;}
