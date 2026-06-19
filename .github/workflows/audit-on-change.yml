@@ -1,8 +1,8 @@
 name: audit-on-change
 # 慢稽核閘門:只在『策略碼/參數變動』時跑(策略凍結期間永不觸發)。
 # CPCV+PBO / 參數 sweep / ablation 的角色 = 改策略才重驗『非過擬』。
-# TODO(策略解凍時再做): 從 finlab monorepo port _txd_atrwin_cpcv_pbo.py 進 audits/,改吃 data/raw/，
-#                       斷言 PBO<0.7 / P(OOS<0)≈0，更新 data/golden/audit_snapshots.json 的 as_of。
+# TODO（策略解凍時再做）: 從 finlab monorepo port _txd_atrwin_cpcv_pbo.py 進 audits/，改吃 data/raw/，
+#                       斷言 PBO 小於 0.7、P(OOS 小於 0) 約 0，更新 data/golden/audit_snapshots.json 的 as_of。
 on:
   push:
     paths:
@@ -13,12 +13,13 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: reproducibility + invariants gate
         run: python -m pytest -q
       - name: overfit audit (placeholder)
-        run: echo "TODO: port CPCV+PBO from finlab monorepo when strategy is unfrozen"
+        run: |
+          echo "TODO - port CPCV+PBO from finlab monorepo when strategy is unfrozen"
