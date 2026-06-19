@@ -155,6 +155,11 @@ export default {
       }
     }
 
+    // 靜態 vendor / 字型:內容穩定、極少變 → 長快取(改 Chart.js 版或字型時加 ?v= 失效)
+    if (path.startsWith("/vendor/") || path.startsWith("/fonts/")) {
+      headers.set("Cache-Control", "public, max-age=2592000");
+    }
+
     return new Response(assetResp.body, {
       status: assetResp.status,
       statusText: assetResp.statusText,

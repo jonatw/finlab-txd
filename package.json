@@ -1,0 +1,16 @@
+{
+  "name": "finlab-txd-build",
+  "private": true,
+  "type": "module",
+  "description": "Dev-time build for vendored optimized assets (tree-shaken Chart.js). Outputs are committed → CF Pages serves with zero CI build. Re-run on dep bump.",
+  "scripts": {
+    "build:vendor": "esbuild tools/chart-entry.mjs --bundle --minify --format=iife --outfile=site/vendor/chart.min.js --legal-comments=none"
+  },
+  "devDependencies": {
+    "chart.js": "4.4.1",
+    "esbuild": "^0.24.0"
+  },
+  "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "^5.2.8"
+  }
+}

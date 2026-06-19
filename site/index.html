@@ -4,15 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TXD 擇時槓桿儀表 — 分級順勢 × MOVE × DTP 高波動關機</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<script defer src="vendor/chart.min.js"></script>
+<link rel="preload" href="fonts/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+@font-face{font-family:"JetBrains Mono Web";src:url("fonts/jetbrains-mono.woff2") format("woff2");font-weight:100 800;font-display:swap;font-style:normal}
 :root{
   --bg:#0b0f14; --panel:#11161e; --panel2:#0d1219; --line:#1e2733; --hair:#2a3545;
   --ink:#e9edf3; --sub:#8e99a8; --faint:#5a6573;
   --amber:#ffb454; --amber-dim:#8a6230; --ice:#7fd4e4; --green:#5dd39e; --red:#ff6b5e;
-  --serif:"Noto Serif TC",serif; --sans:"Noto Sans TC",sans-serif; --mono:"JetBrains Mono",monospace;
+  --serif:"Songti TC","Noto Serif CJK TC",ui-serif,serif;
+  --sans:-apple-system,"PingFang TC","Microsoft JhengHei","Noto Sans CJK TC",system-ui,sans-serif;
+  --mono:"JetBrains Mono Web",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box} html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 var(--sans);
@@ -538,8 +540,11 @@ footer b{color:var(--sub)}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)],
       fmt=n=>n.toLocaleString('zh-TW',{maximumFractionDigits:0});
 let SIG,NAV,MET,HLT;
-Promise.all([fetch('data/signal.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/nav.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/metrics.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),fetch('data/health.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)])
- .then(([s,n,m,h])=>{SIG=s;NAV=n;MET=m;HLT=h;render()}).catch(e=>{$('#banner').style.display='block';$('#banner').textContent='資料載入失敗:'+e});
+// 同源 JSON:拿掉 ?t= cache-buster 與 no-store,改用瀏覽器/CDN 快取 + ETag 重新驗證
+// (CF 設 must-revalidate → 每次條件式 GET,資料變了拿新、沒變回 304;既新鮮又省頻寬,重訪極快)。
+const J=u=>fetch(u).then(r=>r.json());
+Promise.all([J('data/signal.json'),J('data/nav.json'),J('data/metrics.json').catch(()=>null),J('data/health.json').catch(()=>null)])
+ .then(([s,n,m,h])=>{SIG=s;NAV=n;MET=m;HLT=h;render();}).catch(e=>{$('#banner').style.display='block';$('#banner').textContent='資料載入失敗:'+e});
 
 /* ── gauge:0~2x 映射到 -100°..100° ── */
 const A0=-100,A1=100, ang=e=>A0+(A1-A0)*(e/2);
