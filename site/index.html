@@ -510,6 +510,14 @@ footer b{color:var(--sub)}
   </div></details>
 </div>
 
+<!-- ════ 08 監控:Sharpe 隨時間 ════ -->
+<div class="sec"><span class="no">08</span><h2>監控 — Sharpe 隨時間怎麼動</h2><span class="ln"></span><span class="sub mono">凍結策略 · 每日重算</span></div>
+<div class="card">
+  <div class="sub">策略參數已<b>凍結</b>,但回測指標仍會因「開口窗每天延伸」漂移 —— 看哪條線取決於你的問題:<span style="color:#8e99a8">全期(1999~)</span>幾乎不動(被幾十年歷史錨住,<b>偵測不到衰退</b>)、<span style="color:#ffb454">2016~</span>=招牌窗、<span style="color:#7fd4e4">OOS(2022~)</span>、<span style="color:#b07d7d">滾動1年</span>會大幅擺盪(<b>大多是窗口換血、非 alpha 變化</b>,別看到掉就嚇到)。</div>
+  <canvas id="shchart" height="150"></canvas>
+  <div class="note" id="shnote">—</div>
+</div>
+
 <footer>
   個人研究工具,<b>非投資建議</b>。TXD = TX + DTP 濾網,已過兩道稽核但屬研究展示版(計畫 Phase 2b 併入主 TX),訊號可能錯誤,自負盈虧。<br>
   回測(2016-11 起)Sharpe 1.40 / MDD −20%、拉到 2003 起的長窗只有 0.99,<b>live 合理期望 ~1.35–1.40</b>(別用回測外推);本質是<b>單一方向的 beta 擇時槓桿 + 高波動煞車</b> —— 它的價值是「跌得有紀律」,不是穩賺。
@@ -519,9 +527,9 @@ footer b{color:var(--sub)}
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)],
       fmt=n=>n.toLocaleString('zh-TW',{maximumFractionDigits:0});
-let SIG,NAV;
-Promise.all([fetch('data/signal.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/nav.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json())])
- .then(([s,n])=>{SIG=s;NAV=n;render()}).catch(e=>{$('#banner').style.display='block';$('#banner').textContent='資料載入失敗:'+e});
+let SIG,NAV,MET;
+Promise.all([fetch('data/signal.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/nav.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/metrics.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)])
+ .then(([s,n,m])=>{SIG=s;NAV=n;MET=m;render()}).catch(e=>{$('#banner').style.display='block';$('#banner').textContent='資料載入失敗:'+e});
 
 /* ── gauge:0~2x 映射到 -100°..100° ── */
 const A0=-100,A1=100, ang=e=>A0+(A1-A0)*(e/2);
@@ -541,6 +549,7 @@ function setNeedle(el,e){el.style.transform=`rotate(${ang(Math.max(0,Math.min(2,
 
 function render(){
   try{buildGauge()}catch(e){console.error('gauge',e)}
+  try{buildSharpe()}catch(e){console.error('sharpe',e)}
   $('#upd').textContent='資料更新至 '+NAV.updated;
   $('#dep').textContent=SIG.status.deploy_date||'—';
   $('#lanepill').textContent=`paper-lane ${SIG.status.lane_health}`;
@@ -788,6 +797,25 @@ function drawCharts(r='all',customStart=null){
     options:{animation:false,scales:{y:{min:0,max:2,display:false},x:{display:false}},
       plugins:{legend:{display:false},tooltip:{enabled:false}}}});
   $('#bnote').textContent=NAV.benchmark_note+' · '+NAV.haircut_note;}
+
+let chS;
+function buildSharpe(){
+  if(!MET||!MET.date){const el=$('#shnote');if(el)el.textContent='監控資料尚未生成(metrics.json)';return;}
+  if(chS)chS.destroy();
+  const ds=(key,lab,col,dash)=>({label:lab,data:MET[key],borderColor:col,borderWidth:1.4,borderDash:dash||[],pointRadius:0,spanGaps:true});
+  chS=new Chart($('#shchart'),{type:'line',data:{labels:MET.date,datasets:[
+    ds('sharpe_full','全期(1999~)','#8e99a8'),
+    ds('sharpe_2016','2016~(招牌)','#ffb454'),
+    ds('sharpe_oos2022','OOS(2022~)','#7fd4e4'),
+    ds('sharpe_1y','滾動1年','#b07d7d',[4,3])]},
+    options:{animation:false,interaction:{mode:'index',intersect:false},
+      scales:{y:{ticks:{color:'#8e99a8',font:{family:'JetBrains Mono',size:10}},grid:{color:'rgba(255,255,255,.05)'},title:{display:true,text:'Sharpe',color:'#8e99a8'}},
+              x:{ticks:{color:'#8e99a8',maxTicksLimit:6,font:{family:'JetBrains Mono',size:10}},grid:{display:false}}},
+      plugins:{legend:{labels:{color:'#e9edf3',font:{family:'Noto Sans TC',size:12}}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'—':c.parsed.y.toFixed(2)}`}}}}});
+  const f2=a=>{const v=a&&a[a.length-1];return v==null?'—':(+v).toFixed(2);};
+  $('#shnote').textContent=`截至 ${MET.updated}:全期 ${f2(MET.sharpe_full)} · 2016~ ${f2(MET.sharpe_2016)} · OOS ${f2(MET.sharpe_oos2022)} · 滾動1年 ${f2(MET.sharpe_1y)}。全期線幾乎水平 = 被歷史錨住、偵測不到衰退;滾動1年的擺盪大多是窗口換血,非 alpha 變化。`;
+}
 
 function calcPnl(){const cap=+$('#cap').value,st=$('#start').value,{date,nav,benchmark}=NAV.series;
   const i=date.findIndex(d=>d>=st);if(i<0||!cap){$('#pnlout').textContent='';return;}
