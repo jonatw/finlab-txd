@@ -29,3 +29,10 @@ jobs:
           git add -A
           git diff --cached --quiet || git commit -m "daily $(date -u +%Y-%m-%d)"
           git push
+      - name: notify on signal change (push)
+        # 只在設了 repo 變數 NOTIFY_WEBHOOK_URL 時啟用;script 內再判 signal.changed 才真送。
+        if: ${{ vars.NOTIFY_WEBHOOK_URL != '' }}
+        env:
+          WEBHOOK: ${{ vars.NOTIFY_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: python scripts/notify_webhook.py
