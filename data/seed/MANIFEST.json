@@ -1,0 +1,27 @@
+{
+  "cutoff": "2026-06-18",
+  "note": "pre-cutoff = finlab(canonical, frozen);post-cutoff 由 Yahoo 增量。實測:73 個 finlab≠Yahoo 曝險翻轉日全在 2020 前,接縫 bit-safe。",
+  "files": {
+    "etf_0050.csv": {
+      "sha256": "2530348935b3504350b0306a369975b96e90d4fd8a396aa0938ca93c4116eb27",
+      "rows": 5650
+    },
+    "etf_0056.csv": {
+      "sha256": "14ba9b72d7e1be393414c571a9be7bf0a58e752fad1ed80814d111cf2020cb49",
+      "rows": 4537
+    },
+    "etf_00631L.csv": {
+      "sha256": "608477ccf05f7c2cde2a72e0b6634b98ba6055eea5e30f910cbe29dd44e03e90",
+      "rows": 2832
+    },
+    "move.csv": {
+      "sha256": "ec6728234e7028d8fbd7c710f87af96c6c14997c5a449912e43c996fb607ad54",
+      "rows": 5834
+    },
+    "taiex_twii.csv": {
+      "sha256": "98f0bb49c5a163586e6024f94bbbf15ae7dba2d2ae81329cd3b84d2c720d26be",
+      "rows": 6780
+    }
+  },
+  "source_versions": "finlab offline cache @ 2026-06-19"
+}

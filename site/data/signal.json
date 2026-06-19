@@ -1,0 +1,56 @@
+{
+  "px_as_of": "2026-06-18",
+  "move_as_of": "2026-06-17",
+  "for_session": "2026-06-19",
+  "for_session_approx": true,
+  "target_exposure": 2.0,
+  "prev_exposure": 2.0,
+  "changed": false,
+  "action": "不需調倉",
+  "pos_text": "台指期 2x 做多",
+  "spine": {
+    "value": 1.0,
+    "index_close": 46465.2,
+    "ma": {
+      "60": 39978.18,
+      "120": 35829.49,
+      "200": 32134.42
+    },
+    "above_ma": [
+      60,
+      120,
+      200
+    ],
+    "n_above": 3
+  },
+  "move": {
+    "value": 70.7,
+    "median252": 75.5,
+    "regime": "低波加碼",
+    "mult": 2
+  },
+  "dtp": {
+    "percentile": 91.2,
+    "atr_pct": 2.45,
+    "threshold_pct": 4,
+    "gated_next": false,
+    "regime": "偏高波動",
+    "note": "DTP% = ATR(14)% 佔收盤的 250 日百分位; ≥ top-4% = 發瘋日, 次一交易日空手"
+  },
+  "status": {
+    "stage": "RESEARCH",
+    "lane_health": "VALIDATED",
+    "deploy_date": null,
+    "note": "TXD = TX + DTP 濾網, 已過 look-ahead + overfit 兩道稽核。live 期望 Sharpe ~1.35"
+  },
+  "freshness": {
+    "px_index": "2026-06-18",
+    "move": "2026-06-17",
+    "curve_stale": false,
+    "market_latest": "2026-06-18",
+    "move_lag_bdays": 1,
+    "stale_warn": false,
+    "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日"
+  },
+  "generated_at": "2026-06-19T11:07:28"
+}

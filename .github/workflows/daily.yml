@@ -1,0 +1,31 @@
+name: daily
+# 06:30 UTC = 14:30 台北(台股 13:30 收盤後)。MOVE 為美債、正常晚台股 1 個交易日(已由 freshness 處理)。
+on:
+  schedule:
+    - cron: "30 6 * * 1-5"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: daily
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: pipeline (fetch Yahoo → rebuild → metrics → export)
+        run: python -m src.pipeline
+      - name: gate (must pass before deploy)
+        run: python -m pytest -q
+      - name: commit & push (Cloudflare Pages auto-deploys on push)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "daily $(date -u +%Y-%m-%d)"
+          git push
