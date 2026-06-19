@@ -43,7 +43,7 @@ def build_curve(taiex: pd.DataFrame, move: pd.Series) -> pd.DataFrame:
     ).max(axis=1)
     atr_pct = tr.ewm(alpha=1 / ATR_WIN, adjust=False).mean() / idx * 100
     dtp = atr_pct.rolling(DTP_LOOKBACK).apply(lambda x: (x.iloc[-1] >= x).mean(), raw=False)
-    gate_sig = (dtp < DTP_THRESH).fillna(True)  # gate[D]=D 收盤判 D+1 可否交易
+    gate_sig = dtp.lt(DTP_THRESH) | dtp.isna()  # gate[D]=D 收盤判 D+1 可否交易;warmup(dtp=NaN)→可交易(原 .fillna(True) 是 no-op,誤把 1999 暖機日鎖成空手)
     exposure = raw_exposure * gate_sig
 
     # 回測(進場 T+1,pos=訊號 shift1=實際持倉)

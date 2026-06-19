@@ -21,7 +21,7 @@ def main():
         "url": f"https://txd.av8r.tw/#{fs}",
         "title": f"{fs} — {s['pos_text']}({s['action']})",
         "content_text": (
-            f"target_exposure={s['target_exposure']} (prev {s['prev_exposure']}, changed={s['changed']}). "
+            f"target_exposure={s['target_exposure']} (prev {s['prev_exposure']}, changed={str(s['changed']).lower()}). "
             f"spine={s['spine']['value']} (站上 {s['spine']['n_above']}/3 均線). "
             f"MOVE={s['move']['value']} vs median252 {s['move']['median252']} → {s['move']['mult']}x. "
             f"DTP pct {s['dtp']['percentile']} ({'高波動關機' if s['dtp']['gated_next'] else '未關機'}). "
