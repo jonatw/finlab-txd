@@ -6,7 +6,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 import pandas as pd
-from src import fetch, metrics, export
+from src import fetch, metrics, export, health
 from src.strategy import build_curve
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,9 +33,11 @@ def main(do_fetch: bool = True):
     print("[2/4] rebuild curve")
     cv = rebuild_curve()
     print(f"    curve {len(cv)} 列 → {cv.index[-1].date()}")
-    print("[3/4] metrics")
+    print("[3/5] metrics")
     metrics.main()
-    print("[4/4] export JSON")
+    print("[4/5] health (paper-lane band + DD breaker)")
+    health.main()
+    print("[5/5] export JSON")
     export.main()
     print("✓ pipeline done")
 

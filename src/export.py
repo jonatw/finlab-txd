@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from src.strategy import ATR_WIN, DTP_LOOKBACK, DTP_THRESH
+from src.config import PAPER_DEPLOY_DATE, PAPER_STAGE, PAPER_LANE_HEALTH
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
@@ -73,8 +74,8 @@ def main():
                 "threshold_pct": int((1 - DTP_THRESH) * 100), "gated_next": gated_next,
                 "regime": "🚨 市場發瘋(關機)" if gated_next else ("偏高波動" if dtp_ref >= 0.85 else "正常"),
                 "note": f"DTP% = ATR({ATR_WIN})% 佔收盤的 {DTP_LOOKBACK} 日百分位; ≥ top-{int((1-DTP_THRESH)*100)}% = 發瘋日, 次一交易日空手"},
-        "status": {"stage": "RESEARCH", "lane_health": "VALIDATED", "deploy_date": None,
-                   "note": "TXD = TX + DTP 濾網, 已過 look-ahead + overfit 兩道稽核。live 期望 Sharpe ~1.35"},
+        "status": {"stage": PAPER_STAGE, "lane_health": PAPER_LANE_HEALTH, "deploy_date": PAPER_DEPLOY_DATE,
+                   "note": f"TXD paper-lane 起算 {PAPER_DEPLOY_DATE}(紙上追蹤,非實單對帳)。已過 look-ahead + overfit 兩道稽核;live 期望 Sharpe ~1.35"},
         "freshness": {"px_index": str(ref.date()), "move": str(move_as_of.date()),
                       "curve_stale": curve_stale, "market_latest": str(market_latest.date()),
                       "move_lag_bdays": move_lag, "stale_warn": bool(move_lag > 1 or curve_stale),

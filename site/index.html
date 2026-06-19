@@ -510,12 +510,22 @@ footer b{color:var(--sub)}
   </div></details>
 </div>
 
-<!-- ════ 08 監控:Sharpe 隨時間 ════ -->
-<div class="sec"><span class="no">08</span><h2>監控 — Sharpe 隨時間怎麼動</h2><span class="ln"></span><span class="sub mono">凍結策略 · 每日重算</span></div>
+<!-- ════ 08 指標漂移(透明度)════ -->
+<div class="sec"><span class="no">08</span><h2>指標漂移 — 為什麼別拿它判斷「還有沒有效」</h2><span class="ln"></span><span class="sub mono">凍結策略 · 透明度</span></div>
 <div class="card">
-  <div class="sub">策略參數已<b>凍結</b>,但回測指標仍會因「開口窗每天延伸」漂移 —— 看哪條線取決於你的問題:<span style="color:#8e99a8">全期(1999~)</span>幾乎不動(被幾十年歷史錨住,<b>偵測不到衰退</b>)、<span style="color:#ffb454">2016~</span>=招牌窗、<span style="color:#7fd4e4">OOS(2022~)</span>、<span style="color:#b07d7d">滾動1年</span>會大幅擺盪(<b>大多是窗口換血、非 alpha 變化</b>,別看到掉就嚇到)。</div>
+  <div class="sub"><b>這張圖是誠實揭露,不是效能監控。</b>策略已凍結,但回測指標會因「開口窗每天延伸」漂移:<span style="color:#8e99a8">全期(1999~)/2016~</span>被幾十年歷史錨住、幾乎不動(<b>就算策略失效也看不出來</b>),<span style="color:#b07d7d">滾動1年</span>則大幅擺盪(<b>多是窗口換血、非 alpha 變化</b>)。要判斷「策略還有沒有用」請看下面 <b>09 health 面板</b>。</div>
   <canvas id="shchart" height="150"></canvas>
   <div class="note" id="shnote">—</div>
+</div>
+
+<!-- ════ 09 health 監控:還有沒有用 ════ -->
+<div class="sec"><span class="no">09</span><h2>health 監控 — 策略還有沒有用?</h2><span class="ln"></span><span class="sub mono">paper-lane · <span id="hdeploy">—</span> 起</span></div>
+<div class="card">
+  <div class="sub"><b>A. 實單 vs 回測期望帶</b> — 灰帶=策略歷史日報酬 block-bootstrap(21日塊×2000)的 1 年累積分布(5–95%),<span style="color:#ffb454">琥珀線</span>=paper-lane 起的實際走勢。掉到帶底(p5)之下 = 低於回測預期(decay 證據)。<b>誠實:期望帶假設報酬分布不變;paper-lane 初期資料少 = 還沒有統計檢力,先把警戒線畫好等資料長。</b></div>
+  <canvas id="hchart" height="150"></canvas>
+  <div class="note" id="hnote">—</div>
+  <div style="margin-top:16px"><b style="font-family:var(--serif)">B. 回撤斷路器</b> <span class="sub">— 真正的早期警報不是 Sharpe,是「破歷史最深回撤」。</span></div>
+  <div id="ddbar"></div>
 </div>
 
 <footer>
@@ -527,9 +537,9 @@ footer b{color:var(--sub)}
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)],
       fmt=n=>n.toLocaleString('zh-TW',{maximumFractionDigits:0});
-let SIG,NAV,MET;
-Promise.all([fetch('data/signal.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/nav.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/metrics.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)])
- .then(([s,n,m])=>{SIG=s;NAV=n;MET=m;render()}).catch(e=>{$('#banner').style.display='block';$('#banner').textContent='資料載入失敗:'+e});
+let SIG,NAV,MET,HLT;
+Promise.all([fetch('data/signal.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/nav.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()),fetch('data/metrics.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null),fetch('data/health.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null)])
+ .then(([s,n,m,h])=>{SIG=s;NAV=n;MET=m;HLT=h;render()}).catch(e=>{$('#banner').style.display='block';$('#banner').textContent='資料載入失敗:'+e});
 
 /* ── gauge:0~2x 映射到 -100°..100° ── */
 const A0=-100,A1=100, ang=e=>A0+(A1-A0)*(e/2);
@@ -550,6 +560,7 @@ function setNeedle(el,e){el.style.transform=`rotate(${ang(Math.max(0,Math.min(2,
 function render(){
   try{buildGauge()}catch(e){console.error('gauge',e)}
   try{buildSharpe()}catch(e){console.error('sharpe',e)}
+  try{buildHealth()}catch(e){console.error('health',e)}
   $('#upd').textContent='資料更新至 '+NAV.updated;
   $('#dep').textContent=SIG.status.deploy_date||'—';
   $('#lanepill').textContent=`paper-lane ${SIG.status.lane_health}`;
@@ -815,6 +826,40 @@ function buildSharpe(){
         tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'—':c.parsed.y.toFixed(2)}`}}}}});
   const f2=a=>{const v=a&&a[a.length-1];return v==null?'—':(+v).toFixed(2);};
   $('#shnote').textContent=`截至 ${MET.updated}:全期 ${f2(MET.sharpe_full)} · 2016~ ${f2(MET.sharpe_2016)} · OOS ${f2(MET.sharpe_oos2022)} · 滾動1年 ${f2(MET.sharpe_1y)}。全期線幾乎水平 = 被歷史錨住、偵測不到衰退;滾動1年的擺盪大多是窗口換血,非 alpha 變化。`;
+}
+
+let chH;
+function buildHealth(){
+  if(!HLT){const e=$('#hnote');if(e)e.textContent='health 資料尚未生成(health.json)';return;}
+  if($('#hdeploy'))$('#hdeploy').textContent=HLT.deploy_date;
+  if(chH)chH.destroy();
+  const N=HLT.horizon, days=[...Array(N).keys()];
+  const livePad=HLT.live_nav.concat(Array(Math.max(0,N-HLT.live_nav.length)).fill(null));
+  chH=new Chart($('#hchart'),{type:'line',data:{labels:days,datasets:[
+    {label:'p5',data:HLT.p5,borderWidth:0,pointRadius:0,fill:false},
+    {label:'期望帶 5–95%',data:HLT.p95,borderWidth:0,backgroundColor:'rgba(142,153,168,.13)',pointRadius:0,fill:'-1'},
+    {label:'回測中位',data:HLT.p50,borderColor:'#5a6573',borderWidth:1,borderDash:[5,4],pointRadius:0,fill:false},
+    {label:'paper-lane 實際',data:livePad,borderColor:'#ffb454',borderWidth:1.8,pointRadius:0,fill:false,spanGaps:false}]},
+    options:{animation:false,interaction:{mode:'index',intersect:false},
+      scales:{y:{ticks:{color:'#8e99a8',font:{family:'JetBrains Mono',size:10},callback:v=>'×'+(+v).toFixed(2)},grid:{color:'rgba(255,255,255,.05)'}},
+              x:{ticks:{color:'#8e99a8',maxTicksLimit:8,font:{family:'JetBrains Mono',size:10},callback:v=>v+'d'},grid:{display:false},title:{display:true,text:'交易日(自 paper-lane 起)',color:'#8e99a8'}}},
+      plugins:{legend:{labels:{color:'#e9edf3',filter:i=>i.text!=='p5',font:{family:'Noto Sans TC',size:12}}},
+        tooltip:{callbacks:{label:c=>c.parsed.y==null?null:`${c.dataset.label}: ×${c.parsed.y.toFixed(3)}`}}}}});
+  const nl=HLT.live_nav.length, P=HLT.horizon-1;
+  $('#hnote').textContent = nl===0
+    ? `paper-lane 自 ${HLT.deploy_date} 起算,尚無實單資料 —— 期望帶已備好、每天累積。1 年後回測中位 ×${HLT.p50[P].toFixed(2)}、5% 衰運尾 ×${HLT.p5[P].toFixed(2)}、95% 順風 ×${HLT.p95[P].toFixed(2)}。`
+    : `paper-lane 第 ${nl} 天:實際 ×${HLT.live_nav[nl-1].toFixed(3)} vs 同日期望帶 [×${HLT.p5[nl-1].toFixed(3)}, ×${HLT.p95[nl-1].toFixed(3)}]。`;
+  const dd=HLT.dd, SC=Math.max(40,Math.ceil(Math.abs(dd.mdd_full_pct)/5)*5);
+  const w=p=>Math.min(100,Math.abs(p)/SC*100).toFixed(1);
+  const cur=dd.current_pct, breached=cur<=dd.mdd_full_pct, warn=cur<=dd.mdd_2016_pct;
+  const pill=breached?'<span class="pill" style="background:rgba(255,107,94,.2);color:#ff6b5e">🚨 破歷史最深 — 斷路</span>':warn?'<span class="pill" style="background:rgba(255,180,84,.2);color:#ffb454">⚠️ 警戒(已超 2016 MDD)</span>':'<span class="pill" style="background:rgba(111,169,140,.2);color:#6fa98c">正常</span>';
+  const mk=(p,lab,col)=>`<div style="position:absolute;left:${w(p)}%;top:0;bottom:0;border-left:1px dashed ${col}"><span style="position:absolute;top:-15px;left:-8px;font:9px var(--mono);color:${col};white-space:nowrap">${lab}</span></div>`;
+  $('#ddbar').innerHTML=`<div style="margin:6px 0 26px">${pill} &nbsp;當前回撤 <b class="num" style="color:var(--amber)">${cur}%</b></div>
+    <div style="position:relative;height:16px;background:rgba(255,255,255,.05);border-radius:3px">
+      <div style="position:absolute;left:0;top:0;bottom:0;width:${w(cur)}%;background:rgba(255,107,94,.4);border-radius:3px"></div>
+      ${mk(dd.mdd_2016_pct,'2016 −20%','#8e99a8')}${mk(dd.tail_mdd_pct,'1yr尾 '+dd.tail_mdd_pct+'%','#caa15a')}${mk(dd.mdd_full_pct,'全期 '+dd.mdd_full_pct+'%','#b07d7d')}
+    </div>
+    <div class="sub" style="margin-top:14px;font-size:11px">當前回撤一旦超過<b>全期 MDD(${dd.mdd_full_pct}%)</b>= 進入前所未見的虧損區 → 真正該停手檢視的訊號(早期警報,非 Sharpe)。1yr 衰運尾 ${dd.tail_mdd_pct}% = bootstrap 估「典型一年內」最深回撤。</div>`;
 }
 
 function calcPnl(){const cap=+$('#cap').value,st=$('#start').value,{date,nav,benchmark}=NAV.series;
