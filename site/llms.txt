@@ -1,0 +1,28 @@
+# TXD — TX 分級順勢 × MOVE 槓桿 × DTP 高波動關機(台指期擇時策略儀表板)
+
+> Serverless、finlab-free 的公開儀表板,單一台指期(TX)擇時策略。每日更新目標槓桿訊號、
+> 1999 起的完整回測 NAV、滾動風險指標、與 paper-lane 健康監控。
+> 口徑(誠實):2016-11 起回測 Sharpe ~1.40 / MaxDD −20%;拉到 1999 長窗只有 ~0.90–0.99;
+> live 合理期望 ~1.35。**非投資建議,僅供研究。** 資料每日(台北約 14:30)由 GitHub Action 重生。
+
+策略一句話:
+- **spine**:^TWII(加權指數)收盤站上 MA60/120/200 的比例 → 曝險 0 / .33 / .67 / 1。
+- **lev**:MOVE(美債波動)< 自身 252 日中位 → 2x,否則 1x。
+- **DTP 關機**:昨日 Wilder-ATR(14)% 衝進 250 日 top-4%(發瘋日)→ 今日空手。
+- 進場 T+1、成本 2bps/單邊。時序安全 by construction(exposure.shift(1)、DTP 用 t-1)。參數凍結。
+
+## Live data(JSON,CORS 開放、可輪詢)
+- [今日訊號](https://txd.av8r.tw/data/signal.json):target_exposure、spine、MOVE、DTP、freshness、`changed` 旗標。
+- [NAV 曲線](https://txd.av8r.tw/data/nav.json):1999 起 strategy/benchmark/exposure/pnl/nav + 0050/0056/00631L 還原含息對照。
+- [指標時序](https://txd.av8r.tw/data/metrics.json):滾動窗(全期/2016/OOS/1年)Sharpe / CAGR / MaxDD。
+- [health 監控](https://txd.av8r.tw/data/health.json):paper-lane 實單 vs block-bootstrap 期望帶 + 回撤斷路器。
+
+## 怎麼用訊號(給 agent)
+- 讀 `signal.json`。`target_exposure` ∈ {0, 0.33, 0.67, 1.0, 2.0} = 今日 TX 目標槓桿。
+- `changed==true` ⇒ 今日需調倉;`action` 是人看的指示(例「不需調倉」)。
+- 看 `freshness.stale_warn`:若 true,曲線還沒重生到最新交易日,當暫定值處理。
+- 這是研究儀表板,**不是下單 API、不是投資建議**。
+
+## Optional
+- [方法與誠實註記](https://txd.av8r.tw/):完整 index.html — 策略推導、look-ahead / overfit 稽核摘要、指標漂移與 health 監控。
+- [原始碼](https://github.com/jonatw/finlab-txd):MIT;git history = 不可竄改稽核日誌,所有數字可從 raw 重生。

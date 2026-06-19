@@ -1,0 +1,39 @@
+# txd.av8r.tw — 不進搜尋引擎,但對 LLM/agent 友善。
+# 政策:搜尋索引器「讓爬但 noindex」(見 _worker.js 的 X-Robots-Tag);AI 訓練爬蟲全擋;
+#       AI 即時取用 + AI 搜尋(各自獨立於 Google 的 index)放行。
+# robots.txt 是建議性的;真正讓你不進 Google/Bing SERP 的是 noindex header,不是這個檔。
+
+# ── 搜尋索引器:不 Disallow(讓它爬到 → 讀到 noindex → 從 SERP 掉出) ──
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: Applebot
+Disallow:
+
+# ── AI 訓練爬蟲:對本站零好處 → 全擋 ──
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: Meta-ExternalAgent
+User-agent: Amazonbot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: anthropic-ai
+User-agent: Claude-Web
+Disallow: /
+
+# ── AI 搜尋 + AI 即時取用(獨立於 Google)→ 放行(這就是 LLM-friendly) ──
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+Allow: /
+
+# ── 其他一律放行 data/API(SERP 由 noindex 處理,不靠 robots.txt) ──
+User-agent: *
+Disallow:
+
+# 刻意不提供 sitemap.xml(sitemap 等於邀請索引,與「不進搜尋引擎」矛盾)。
+# LLM 索引:https://txd.av8r.tw/llms.txt
