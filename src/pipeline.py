@@ -1,4 +1,4 @@
-"""每日管線:fetch(Yahoo 增量)→ rebuild curve → metrics → export JSON。finlab-free。
+"""每日管線:fetch(Yahoo 增量)→ rebuild → metrics → health → export → feed。finlab-free。
     python -m src.pipeline            # 完整跑
     python -m src.pipeline --no-fetch # 只重算(離線/CI 重現)
 """
@@ -25,17 +25,17 @@ def rebuild_curve() -> pd.DataFrame:
 
 def main(do_fetch: bool = True):
     if do_fetch:
-        print("[1/4] fetch (Yahoo incremental)")
+        print("[1/6] fetch (Yahoo incremental)")
         for line in fetch.main():
             print("   ", line)
     else:
-        print("[1/4] fetch skipped (--no-fetch)")
-    print("[2/4] rebuild curve")
+        print("[1/6] fetch skipped (--no-fetch)")
+    print("[2/6] rebuild curve")
     cv = rebuild_curve()
     print(f"    curve {len(cv)} 列 → {cv.index[-1].date()}")
-    print("[3/5] metrics")
+    print("[3/6] metrics")
     metrics.main()
-    print("[4/5] health (paper-lane band + DD breaker)")
+    print("[4/6] health (paper-lane band + DD breaker)")
     health.main()
     print("[5/6] export JSON")
     export.main()
