@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   issues: write
+  pull-requests: write
 concurrency:
   group: dep-bump
   cancel-in-progress: false
@@ -25,7 +26,8 @@ jobs:
           names=$(sed -E 's/[=<>!~;[:space:]].*//' requirements.txt | grep -v '^$' | tr '\n' ' ')
           echo "bumping: $names"
           pip install -U $names
-      - name: rewrite pins to installed versions
+      - name: rewrite pins + classify major vs minor/patch
+        id: bump
         run: python scripts/bump_pins.py
       - name: show candidate requirements.txt
         run: git --no-pager diff requirements.txt || true
@@ -35,16 +37,30 @@ jobs:
           python -c "from src.fetch import _yf; _yf('^TWII', False, period='5d'); print('live fetch OK')"
           python -m src.pipeline
           python -m pytest -q
-      - name: commit bump if gate green（只 commit requirements.txt;資料推進歸 daily 管)
+      - name: gate 綠 → minor/patch 自動 commit;major 走 PR
         if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git checkout -- data site 2>/dev/null || true
-          if git diff --quiet requirements.txt; then echo "已是最新,無 pin 變動"; exit 0; fi
+          git checkout -- data site 2>/dev/null || true   # 資料推進歸 daily 管
+          if [ "${{ steps.bump.outputs.has_changes }}" != "true" ]; then echo "已是最新,無 pin 變動"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add requirements.txt
-          git commit -m "chore: auto dep-bump(gate 綠)$(date -u +%F)"
-          git push
+          if [ "${{ steps.bump.outputs.has_major }}" = "true" ]; then
+            branch="dep-bump/$(date -u +%Y%m%d-%H%M)"
+            git checkout -b "$branch"
+            git add requirements.txt
+            git commit -m "chore: dep-bump(含 major,待 review)$(date -u +%F)"
+            git push origin "$branch"
+            gh pr create --base main --head "$branch" \
+              --title "dep-bump(含 major 版號)$(date -u +%F)" \
+              --body "自動升級,gate(實況抓取+完整管線+24測試+golden 錨點)全綠。依政策含 major 版號 → 走 PR 等人 review。變動:${{ steps.bump.outputs.changes }}。golden/seam/look-ahead 已 bit-identical 把關,merge 前掃一眼 breaking change 即可。" \
+              || echo "PR 建立失敗(非致命)"
+          else
+            git add requirements.txt
+            git commit -m "chore: auto dep-bump(minor/patch,gate 綠)$(date -u +%F)"
+            git push
+          fi
       - name: open issue if gate failed（維持現有 pin 不動)
         if: failure()
         env:
