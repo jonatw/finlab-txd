@@ -18,3 +18,8 @@ def move():
 @pytest.fixture(scope="session")
 def curve():
     return pd.read_csv(ROOT / "data/derived/curve.csv", parse_dates=["date"]).set_index("date")
+
+
+@pytest.fixture(scope="session")
+def pcr():
+    return pd.read_csv(ROOT / "data/raw/taifex_pcr.csv", parse_dates=["date"]).set_index("date")["pcr"]

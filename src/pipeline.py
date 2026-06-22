@@ -6,7 +6,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 import pandas as pd
-from src import fetch, metrics, export, health, feed
+from src import fetch, metrics, export, health, feed, pcr
 from src.strategy import build_curve
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +41,12 @@ def main(do_fetch: bool = True):
     export.main()
     print("[6/6] feed (JSON Feed)")
     feed.main()
+    # P/C 反向擇時 paper-lane(#133):平行觀察訊號,失敗絕不擋 TXD 主管線
+    print("[+] pcr paper-lane (TAIFEX P/C, 平行訊號)")
+    try:
+        pcr.main(do_fetch=do_fetch)
+    except Exception as e:  # noqa: BLE001
+        print(f"    pcr: SKIP {str(e)[:60]} (paper-lane 失敗不擋主線)")
     print("✓ pipeline done")
 
 

@@ -1,0 +1,24 @@
+{
+  "pcr_as_of": "2026-06-22",
+  "pcr_value": 147.65,
+  "threshold_p60": 136.97,
+  "trailing_pctile": 74.6,
+  "signal_next": true,
+  "pos_text": "做多加權指數(P/C 偏高=恐慌→抄反彈)",
+  "regime": "恐慌/投降區(進場)",
+  "rule": "P/C > 自身 trailing-252 p60 → 隔日做多;否則空手(T+1, 2bps)",
+  "backtest": {
+    "span": "2010-01-04~2026-06-22",
+    "sharpe": 1.07,
+    "mdd_pct": -24.6,
+    "note": "全期回測參考值;非 live 保證。研究 gauntlet:躲 5-6 危機、PBO benign、與 TXD corr 0.61"
+  },
+  "paper_lane": {
+    "deploy_date": "2026-06-22",
+    "days": 1,
+    "nav": 1.0,
+    "benchmark": 1.0275,
+    "note": "P/C 反向擇時平行 paper-lane(#133)。不混入 TXD 部署曲線;養 track record 後再決定 standalone vs 與 TXD blend(研究實測 blend 更好)"
+  },
+  "generated_at": "2026-06-22T21:53:44+08:00"
+}
