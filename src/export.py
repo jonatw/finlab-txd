@@ -5,7 +5,8 @@
 """
 from __future__ import annotations
 import json
-from datetime import datetime
+from datetime import datetime, time as dtime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -14,6 +15,8 @@ from src.config import PAPER_DEPLOY_DATE, PAPER_STAGE, PAPER_LANE_HEALTH
 import exchange_calendars as xcals
 
 _WEEKDAY_TW = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"]
+TW = ZoneInfo("Asia/Taipei")
+TWSE_CLOSE = dtime(13, 30)  # 台股現貨收盤
 
 
 def _next_trading_session(ref):
@@ -30,6 +33,36 @@ def _next_trading_session(ref):
     d = ref + pd.offsets.BDay(1)
     return d, _WEEKDAY_TW[d.weekday()], False
 
+
+def _last_completed_session(now_tw):
+    """以 13:30 TWT 收盤為界,當下『收盤已過』的最近 TWSE 交易日(認假期)。
+    fetch 失敗時 raw 不前進,靠這個對掛鐘比對才抓得到『訊號過期』(curve_stale 看不到)。"""
+    try:
+        cal = xcals.get_calendar("XTAI")
+        today = pd.Timestamp(now_tw.date())
+        sess = cal.sessions_in_range(today - pd.Timedelta(days=20), today)
+        if len(sess) == 0:
+            return None
+        last = pd.Timestamp(sess[-1])
+        if last.date() == now_tw.date() and now_tw.time() < TWSE_CLOSE:
+            sess = sess[:-1]  # 今天還沒收盤 → 退到前一個交易日
+            last = pd.Timestamp(sess[-1]) if len(sess) else None
+        return last
+    except Exception:
+        return None
+
+
+def _data_lag_sessions(ref, expected):
+    """ref(最後資料日)落後 expected(應有的最近收盤日)幾個 TWSE 交易日;0 = 不落後。"""
+    if expected is None or expected <= ref:
+        return 0
+    try:
+        cal = xcals.get_calendar("XTAI")
+        return int(len(cal.sessions_in_range(ref + pd.Timedelta(days=1), expected)))
+    except Exception:
+        return int(max(np.busday_count(ref.date(), expected.date()), 0))
+
+
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
 OUT = ROOT / "site" / "data"
@@ -42,7 +75,12 @@ def _series(name, col="adj"):
     return df[col].astype(float)
 
 
-def main():
+def main(now=None, write=True):
+    """now: 可注入的 tz-aware 當下時間(預設 datetime.now(TW));測試用以固定掛鐘。
+    write=False: 只計算回傳 signal dict,不落地檔案(測試用,不污染 working tree)。"""
+    now_tw = now if now is not None else datetime.now(TW)
+    if now_tw.tzinfo is None:
+        now_tw = now_tw.replace(tzinfo=TW)
     OUT.mkdir(parents=True, exist_ok=True)
     cv = pd.read_csv(CURVE, parse_dates=["date"]).set_index("date")
     ref = cv.index[-1]
@@ -69,6 +107,10 @@ def main():
 
     move_as_of = min(pd.Timestamp(move_df.index[-1]), ref)
     move_lag = max(int(np.busday_count(pd.Timestamp(move_df.index[-1]).date(), ref.date())), 0)
+    # 掛鐘新鮮度:抓取失敗時 raw 不前進,curve_stale 看不到 → 用『應有的最近收盤日』對比
+    expected_session = _last_completed_session(now_tw)
+    data_lag = _data_lag_sessions(ref, expected_session)
+    data_stale = data_lag > 0
     for_session, for_session_wd, fs_exact = _next_trading_session(ref)
     exp_sig = cv["exposure"]
     exp_held = exp_sig.shift(1).fillna(0.0)
@@ -96,9 +138,13 @@ def main():
                    "note": f"TXD paper-lane 起算 {PAPER_DEPLOY_DATE}(紙上追蹤,非實單對帳)。已過 look-ahead + overfit 兩道稽核;live 期望 Sharpe ~1.35"},
         "freshness": {"px_index": str(ref.date()), "move": str(move_as_of.date()),
                       "curve_stale": curve_stale, "market_latest": str(market_latest.date()),
-                      "move_lag_bdays": move_lag, "stale_warn": bool(move_lag > 1 or curve_stale),
-                      "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日"},
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+                      "move_lag_bdays": move_lag,
+                      "expected_last_session": str(expected_session.date()) if expected_session is not None else None,
+                      "data_lag_sessions": data_lag, "data_stale": data_stale,
+                      "stale_warn": bool(move_lag > 1 or curve_stale or data_stale),
+                      "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; "
+                              "data_stale=true 表示抓取落後實際交易日(可能 Yahoo 抓取失敗)→ 訊號過期, 先別照做"},
+        "generated_at": now_tw.isoformat(timespec="seconds"),
     }
 
     def etf(t):
@@ -122,10 +168,12 @@ def main():
         },
         "etf_note": "0050/0056/00631L = 還原含息(持有人真實報酬口徑, 與不含息的加權指數基準不同); 上市前無資料不畫",
     }
-    (OUT / "signal.json").write_text(json.dumps(signal, ensure_ascii=False, indent=2))
-    (OUT / "nav.json").write_text(json.dumps(nav, ensure_ascii=False, separators=(",", ":")))
-    print(f"✓ signal.json: {ref.date()} target {target}x DTP {dtp_ref*100:.0f}%{' 🚨' if gated_next else ''}")
-    print(f"✓ nav.json: {len(cv)} 天, updated {nav['updated']}, 關機日 {sum(nav['series']['dtp_gated'])}")
+    if write:
+        (OUT / "signal.json").write_text(json.dumps(signal, ensure_ascii=False, indent=2))
+        (OUT / "nav.json").write_text(json.dumps(nav, ensure_ascii=False, separators=(",", ":")))
+        print(f"✓ signal.json: {ref.date()} target {target}x DTP {dtp_ref*100:.0f}%{' 🚨' if gated_next else ''}")
+        print(f"✓ nav.json: {len(cv)} 天, updated {nav['updated']}, 關機日 {sum(nav['series']['dtp_gated'])}")
+    return signal
 
 
 if __name__ == "__main__":

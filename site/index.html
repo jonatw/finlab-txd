@@ -611,9 +611,10 @@ function render(){
   /* 新鮮度 */
   const f=SIG.freshness;
   const fpx=f.px_index||f.px_0050;
-  const fmsg=f.curve_stale?`<span class="pill p-red">curve 未更新(市場已到 ${f.market_latest},訊號是 ${fpx} 的)</span>`
-    :(f.stale_warn?`<span class="pill p-red">MOVE 落後 ${f.move_lag_bdays} 個交易日</span>`:'<span class="pill p-grn">新鮮</span>');
-  const gen=(SIG.generated_at||'').replace('T',' ').slice(0,16);
+  const fmsg=f.data_stale?`<span class="pill p-red">⚠️ 資料過期 — 應到 ${f.expected_last_session},訊號還是 ${fpx} 的(落後 ${f.data_lag_sessions} 個交易日,抓取可能失敗,先別照做)</span>`
+    :(f.curve_stale?`<span class="pill p-red">curve 未更新(市場已到 ${f.market_latest},訊號是 ${fpx} 的)</span>`
+    :(f.stale_warn?`<span class="pill p-red">MOVE 落後 ${f.move_lag_bdays} 個交易日</span>`:'<span class="pill p-grn">新鮮</span>'));
+  const gen=SIG.generated_at?(SIG.generated_at.replace('T',' ').slice(0,16)+' TWT'):'—';
   $('#fresh').innerHTML=`加權指數 <b class="num">${fpx}</b> · MOVE <b class="num">${f.move}</b><br>
     <span style="font-size:11px">網頁產出 <b class="num">${gen}</b>(每日收盤後自動更新)</span><br>${fmsg}<br>
     <span style="font-size:11px;color:var(--sub)">MOVE 是美債數據,<b>晚台股一天是正常時差</b>(訊號本來就只用台灣收盤時已知的最新值,不影響正確性);落後 >1 個交易日才會紅標 — 那代表 ×1/×2 風險檔位可能用到過時資訊,訊號先別照做。</span>`;

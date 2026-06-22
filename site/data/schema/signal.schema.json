@@ -59,9 +59,12 @@
       "type": "object",
       "required": ["stale_warn"],
       "properties": {
-        "stale_warn": { "type": "boolean", "description": "true = 曲線尚未重生到最新交易日,當暫定值" },
+        "stale_warn": { "type": "boolean", "description": "true = 訊號可能過期(curve 未重生 / 資料落後實際交易日 / MOVE 落後 >1 日),當暫定值別照做" },
         "curve_stale": { "type": "boolean" },
-        "move_lag_bdays": { "type": "integer" }
+        "move_lag_bdays": { "type": "integer" },
+        "expected_last_session": { "type": ["string", "null"], "description": "以掛鐘判定『現在應有的最近 TWSE 收盤日』" },
+        "data_lag_sessions": { "type": "integer", "description": "最後資料日落後 expected_last_session 幾個交易日(0=新鮮)" },
+        "data_stale": { "type": "boolean", "description": "true = 抓取落後實際交易日(可能 Yahoo 抓取失敗),訊號過期" }
       }
     },
     "generated_at": { "type": "string", "format": "date-time" }
