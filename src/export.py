@@ -169,7 +169,17 @@ def main(now=None, write=True):
         "etf_note": "0050/0056/00631L = 還原含息(持有人真實報酬口徑, 與不含息的加權指數基準不同); 上市前無資料不畫",
     }
     if write:
-        (OUT / "signal.json").write_text(json.dumps(signal, ensure_ascii=False, indent=2))
+        # 冪等:若除了 generated_at 之外無實質變化,保留舊時戳 → 不產生 diff → 重試窗多班不刷 commit
+        sig_path = OUT / "signal.json"
+        if sig_path.exists():
+            try:
+                old = json.loads(sig_path.read_text())
+                if {k: v for k, v in old.items() if k != "generated_at"} == \
+                   {k: v for k, v in signal.items() if k != "generated_at"}:
+                    signal["generated_at"] = old.get("generated_at", signal["generated_at"])
+            except Exception:  # noqa: BLE001
+                pass
+        sig_path.write_text(json.dumps(signal, ensure_ascii=False, indent=2))
         (OUT / "nav.json").write_text(json.dumps(nav, ensure_ascii=False, separators=(",", ":")))
         print(f"✓ signal.json: {ref.date()} target {target}x DTP {dtp_ref*100:.0f}%{' 🚨' if gated_next else ''}")
         print(f"✓ nav.json: {len(cv)} 天, updated {nav['updated']}, 關機日 {sum(nav['series']['dtp_gated'])}")

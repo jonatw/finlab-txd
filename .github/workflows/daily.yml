@@ -1,8 +1,12 @@
 name: daily
 # 06:30 UTC = 14:30 台北(台股 13:30 收盤後)。MOVE 為美債、正常晚台股 1 個交易日(已由 freshness 處理)。
+# 重試窗:Yahoo 抓取暫時失敗時,後續班次冪等重試到資料補上(export 對無實質變化不刷 commit)。
 on:
   schedule:
-    - cron: "30 6 * * 1-5"
+    - cron: "30 6 * * 1-5"   # 14:30 TWT — 主班(趕得上台指期夜盤 15:00)
+    - cron: "30 7 * * 1-5"   # 15:30 TWT — 重試窗
+    - cron: "30 8 * * 1-5"   # 16:30 TWT — 重試窗
+    - cron: "30 9 * * 1-5"   # 17:30 TWT — 末班;仍 stale 則告警 + job 標紅
   workflow_dispatch:
 permissions:
   contents: write
@@ -36,3 +40,21 @@ jobs:
           WEBHOOK: ${{ vars.NOTIFY_WEBHOOK_URL }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: python scripts/notify_webhook.py
+      - name: stale guard (末班/手動仍 stale → 告警 + job 標紅)
+        # 重試窗末班(17:30 TWT)或手動觸發時,若訊號仍過期 → 發 stale webhook + 讓 job 失敗(GitHub 通知 + Actions 紅燈)。
+        # 早班的暫時 stale 不在此 gate,避免重試過程誤報。
+        if: ${{ github.event.schedule == '30 9 * * 1-5' || github.event_name == 'workflow_dispatch' }}
+        env:
+          WEBHOOK: ${{ vars.NOTIFY_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          python scripts/notify_webhook.py --stale || true
+          python - <<'PY'
+          import json, sys
+          fr = json.load(open("site/data/signal.json"))["freshness"]
+          if fr.get("data_stale"):
+              print(f"::error::TXD 訊號過期 — 最後資料 {fr['px_index']} 但應到 {fr['expected_last_session']}"
+                    f"(落後 {fr['data_lag_sessions']} 個交易日)。Yahoo 抓取可能持續失敗,今日未補出新訊號。")
+              sys.exit(1)
+          print("signal fresh; stale guard OK.")
+          PY

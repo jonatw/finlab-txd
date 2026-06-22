@@ -16,13 +16,27 @@ RAW = Path(__file__).resolve().parents[1] / "data" / "raw"
 MAX_DAILY_MOVE = 0.11  # 台股 ±10% + buffer
 
 
-def _yf(symbol: str, auto_adjust: bool, period: str = "1y") -> pd.DataFrame:
+def _yf(symbol: str, auto_adjust: bool, period: str = "1y", tries: int = 4) -> pd.DataFrame:
+    """抓 Yahoo,對暫時性失敗做 backoff 重試(yfinance 失敗常為 rate-limit / 端點抖動)。
+    健康的 1y 下載必非空 → 回空集合視同失敗重試(區分『Yahoo 掛了』與『沒有新 bar』)。
+    最終仍失敗 → raise,交給上層 main() 的 try/except『keep existing + warning』。"""
+    import time
     import yfinance as yf
-    df = yf.download(symbol, period=period, progress=False, auto_adjust=auto_adjust)
-    if df.columns.nlevels > 1:
-        df.columns = df.columns.get_level_values(0)
-    df.index = pd.to_datetime(df.index)
-    return df
+    last = None
+    for i in range(tries):
+        try:
+            df = yf.download(symbol, period=period, progress=False, auto_adjust=auto_adjust)
+            if not df.empty:
+                if df.columns.nlevels > 1:
+                    df.columns = df.columns.get_level_values(0)
+                df.index = pd.to_datetime(df.index)
+                return df
+            last = "empty result (Yahoo 可能擋下/壞掉)"
+        except Exception as e:  # noqa: BLE001
+            last = str(e)[:80]
+        if i < tries - 1:
+            time.sleep(3 * (i + 1))  # 3 / 6 / 9 秒 backoff
+    raise RuntimeError(f"yfinance {symbol} failed after {tries} tries: {last}")
 
 
 def _read(name: str) -> pd.DataFrame:
