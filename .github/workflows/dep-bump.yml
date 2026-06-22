@@ -1,0 +1,57 @@
+name: dep-bump
+# 每週把所有套件升到最新 → 跑「實況管線(真抓 Yahoo)+ 全測試」閘門 → 綠燈才改 pin 並自動 commit。
+# 防範本次事件:pinned 套件(如 yfinance)被上游 API 淘汰、訊號靜默斷掉。
+# 安全網 = 既有 golden 錨點 / seam / look-ahead / data-sanity 測試:任何資料漂移或時序破壞都會擋下 bump。
+on:
+  schedule:
+    - cron: "0 3 * * 1"   # 週一 03:00 UTC = 11:00 台北(盤前、低風險)
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: dep-bump
+  cancel-in-progress: false
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: upgrade all top-level deps to latest
+        run: |
+          names=$(sed -E 's/[=<>!~;[:space:]].*//' requirements.txt | grep -v '^$' | tr '\n' ' ')
+          echo "bumping: $names"
+          pip install -U $names
+      - name: rewrite pins to installed versions
+        run: python scripts/bump_pins.py
+      - name: show candidate requirements.txt
+        run: git --no-pager diff requirements.txt || true
+      - name: gate — 實況抓取必須成功 + 完整管線 + 全測試
+        run: |
+          # 直接驗新版能否與 Yahoo 對話(本次失敗模式只有 live fetch 抓得到)
+          python -c "from src.fetch import _yf; _yf('^TWII', False, period='5d'); print('live fetch OK')"
+          python -m src.pipeline
+          python -m pytest -q
+      - name: commit bump if gate green（只 commit requirements.txt;資料推進歸 daily 管)
+        if: success()
+        run: |
+          git checkout -- data site 2>/dev/null || true
+          if git diff --quiet requirements.txt; then echo "已是最新,無 pin 變動"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add requirements.txt
+          git commit -m "chore: auto dep-bump(gate 綠)$(date -u +%F)"
+          git push
+      - name: open issue if gate failed（維持現有 pin 不動)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git checkout -- requirements.txt 2>/dev/null || true
+          gh issue create \
+            --title "dep-bump gate 失敗 $(date -u +%F)" \
+            --body "自動升級套件後『實況管線+測試』未過 → **維持現有 pin 未改**。可能是某套件 breaking change、或資料源/數字漂移觸發 golden/seam 測試。請手動檢查。Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            || echo "issue create 失敗(非致命)"
