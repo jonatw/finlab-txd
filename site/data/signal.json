@@ -50,11 +50,11 @@
     "curve_stale": false,
     "market_latest": "2026-06-23",
     "move_lag_bdays": 1,
-    "expected_last_session": "2026-06-22",
+    "expected_last_session": "2026-06-23",
     "data_lag_sessions": 0,
     "data_stale": false,
     "stale_warn": false,
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示抓取落後實際交易日(可能 Yahoo 抓取失敗)→ 訊號過期, 先別照做"
   },
-  "generated_at": "2026-06-23T09:21:36+08:00"
+  "generated_at": "2026-06-23T15:10:27+08:00"
 }
