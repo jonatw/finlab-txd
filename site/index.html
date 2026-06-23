@@ -238,6 +238,7 @@ footer b{color:var(--sub)}
     <span class="sub">(小台自動 = ÷4、微台 = ÷20)</span>
   </div></details>
   <div class="sub" style="font-size:11px;margin-top:8px">每點價值:微台 10 / 小台 50 / 大台 200 元(小台保證金=大台÷4、微台=大台÷20)· 口數無條件捨去(寧可少開)· 口數越少總手續費越低 · 掛單:早上 6 點掛、市價、ROC(以券商為準)</div>
+  <div style="margin-top:10px"><button id="clearcfg" type="button" style="font:600 11.5px var(--sans);color:var(--sub);background:none;border:1px solid var(--hair);border-radius:6px;padding:4px 10px;cursor:pointer" title="清除本機存的 資金/本金/保證金/起始日 設定,回到預設值">🗑 清除我存的設定</button> <span class="sub" style="font-size:11px">· 你打的數字會自動存在這台瀏覽器,下次自動帶回(不含即時的台指期現價)</span></div>
 </div>
 
 
@@ -621,6 +622,15 @@ function render(){
 
   /* 我該動嗎 */
   const myexp=$('#myexp'); myexp.value=localStorage.tx_myexp??'';
+  /* 本機設定持久化(localStorage,純前端;即時的台指期現價 taiex 不存)+ 清除鈕。只設一次。*/
+  if(!window._txCfg){window._txCfg=1;
+    [['navin','tx_navin'],['marginBig','tx_marginBig'],['cap','tx_cap'],['start','tx_start'],['chartstart','tx_chartstart']]
+    .forEach(([id,key])=>{const el=document.getElementById(id); if(!el)return;
+      const v=localStorage[key]; if(v!=null&&v!==''){el.value=v; if(id==='marginBig')el.dataset.touched=1;}
+      el.addEventListener('input',()=>{if(el.value!=='')localStorage[key]=el.value; else delete localStorage[key];});});
+    const cb=document.getElementById('clearcfg');
+    if(cb)cb.onclick=()=>{['tx_myexp','tx_navin','tx_marginBig','tx_cap','tx_start','tx_chartstart'].forEach(k=>delete localStorage[k]);location.reload();};
+  }
   const calcAdvice=()=>{const my=parseFloat(myexp.value);
     if(isNaN(my)){$('#advice').innerHTML='<span class="sub">輸入你現在持有幾倍 → 錶盤會出現你的指針</span>';$('#ghostN').style.opacity=0;$('#gapfill').style.width='0%';return;}
     localStorage.tx_myexp=my; $('#ghostN').style.opacity=.9; setNeedle($('#ghostN'),my);
