@@ -228,7 +228,7 @@ footer b{color:var(--sub)}
   <div class="note">這是<b>槓桿旋鈕</b>不是股票:2x→1x 是把旋鈕轉小、<b>仍持有 1 倍繼續賺</b>,不是清倉逃跑;只有目標 = 0 才真空手。<br><span id="freqline"></span></div>
   <div class="inrow" style="margin-top:16px">
     <div><label>策略總資金(期貨戶權益)</label><input id="navin" type="number" value="1500000"></div>
-    <div><label>台指期現價</label><input id="taiex" type="number" value="45070"></div>
+    <div><label>台指期現價 <button id="alignpx" type="button" style="font:600 10.5px var(--sans);color:var(--sub);background:none;border:1px solid var(--hair);border-radius:5px;padding:1px 6px;cursor:pointer;vertical-align:middle" title="帶入最新加權指數收盤(與台指期有小基差;精確下單以券商即時報價為準)">↻ 帶最新</button></label><input id="taiex" type="number" value="45070"></div>
   </div>
   <div id="ctr" style="margin-top:14px">—</div>
   <details style="margin-top:8px"><summary style="font:600 12.5px var(--sans);color:var(--sub)">進階:保證金數字哪來的?(可自訂)</summary><div>
@@ -682,6 +682,14 @@ function render(){
       <div class="sub" style="color:var(--amber);font-size:12px;margin-top:6px">⚠️ 「剩餘緩衝」不是閒錢 — 它是這個策略的擔保。回測就是用<b>全部本金</b>當底算的;把緩衝挪去買別的 = 偷偷加槓桿,回撤會比歷史更深。</div>`;
     $('#ctr').innerHTML=html;};
   $('#marginBig').addEventListener('input',e=>{e.target.dataset.touched=1;calcCtr()});
+  // 台指期現價:沒手動改過就帶最新加權指數收盤(非即時、與期貨有小基差;精確下單看券商即時報價)
+  const _taiex=$('#taiex'), _pxNow=SIG.spine&&SIG.spine.index_close;
+  if(_pxNow&&!_taiex.dataset.touched)_taiex.value=Math.round(_pxNow);
+  if(!window._txAlign){window._txAlign=1;
+    _taiex.addEventListener('input',()=>_taiex.dataset.touched=1);
+    const _ab=document.getElementById('alignpx');
+    if(_ab)_ab.onclick=()=>{const p=SIG.spine&&SIG.spine.index_close; if(p){_taiex.value=Math.round(p);_taiex.dataset.touched=1;calcCtr();}};
+  }
   $('#navin').oninput=$('#taiex').oninput=calcCtr; calcCtr();
 
   if(!NAV)return;  // signal-first:NAV(89KB)未到 → 先畫好上半部訊號卡(LCP),下半圖表/計算等 NAV 到再補
