@@ -52,6 +52,19 @@ def _last_completed_session(now_tw):
         return None
 
 
+def _signal_ref(cv_index, now_tw):
+    """訊號基準日 = curve 中 ≤『當下已收盤(過 13:30)交易日』的最後一列(時間感知)。
+    擋掉 partial today bar / 提前列把 for_session 誤推到隔天。盤前→昨天、收盤後→今天。
+    日曆失敗(last_done=None)→ 退回 curve 最後一列(維持原行為,不更糟)。"""
+    ref = cv_index[-1]
+    last_done = _last_completed_session(now_tw)
+    if last_done is not None and ref > last_done:
+        earlier = cv_index[cv_index <= last_done]
+        if len(earlier):
+            ref = earlier[-1]
+    return ref
+
+
 def _data_lag_sessions(ref, expected):
     """ref(最後資料日)落後 expected(應有的最近收盤日)幾個 TWSE 交易日;0 = 不落後。"""
     if expected is None or expected <= ref:
@@ -83,7 +96,8 @@ def main(now=None, write=True):
         now_tw = now_tw.replace(tzinfo=TW)
     OUT.mkdir(parents=True, exist_ok=True)
     cv = pd.read_csv(CURVE, parse_dates=["date"]).set_index("date")
-    ref = cv.index[-1]
+    # 時間感知訊號基準日(擋 partial today bar / 提前列把 for_session 誤推到隔天 → 不論幾點都正確)
+    ref = _signal_ref(cv.index, now_tw)
     tx = pd.read_csv(RAW / "taiex_twii.csv", parse_dates=["date"]).set_index("date")
     idx, hi, lo = tx["close"].dropna().astype(float), tx["high"].astype(float), tx["low"].astype(float)
     cal = idx.index
@@ -114,8 +128,9 @@ def main(now=None, write=True):
     for_session, for_session_wd, fs_exact = _next_trading_session(ref)
     exp_sig = cv["exposure"]
     exp_held = exp_sig.shift(1).fillna(0.0)
-    target = 0.0 if gated_next else float(exp_sig.iloc[-1])
-    prev = float(exp_sig.iloc[-2])
+    _rpos = cv.index.get_loc(ref)  # 用 ref(已收盤基準日)取訊號,非盲取最後一列
+    target = 0.0 if gated_next else float(exp_sig.iloc[_rpos])
+    prev = float(exp_sig.iloc[_rpos - 1]) if _rpos >= 1 else 0.0
     changed = abs(target - prev) > 1e-9
     action = "不需調倉" if not changed else ("加碼" if target > prev else "減碼")
 

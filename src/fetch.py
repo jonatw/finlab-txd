@@ -8,12 +8,28 @@
 - 任一來源失敗 → 保留現有資料 + 回報 warning,不丟例外(管線不崩)。
 """
 from __future__ import annotations
+from datetime import datetime, time as dtime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
 RAW = Path(__file__).resolve().parents[1] / "data" / "raw"
 MAX_DAILY_MOVE = 0.11  # 台股 ±10% + buffer
+TW = ZoneInfo("Asia/Taipei")
+TWSE_CLOSE = dtime(13, 30)  # 台股現貨收盤
+
+
+def _session_cutoff(now=None) -> pd.Timestamp:
+    """可 append 的最後 bar 日期上限:擋掉『今天未過 13:30 收盤』的 partial bar。
+    盤前/盤中(< 13:30)→ 上限退回昨天(拒收今天未完成的列);收盤後 → 含今天。
+    只 append 已完成的交易日 → 避免 partial bar 把訊號推到隔天、且不會被後續班(> last)漏修。
+    holiday 不需精算:這是上限,yfinance 本就不回週末/假日 bar。"""
+    now = now or datetime.now(TW)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=TW)
+    today = pd.Timestamp(now.date())
+    return (today - pd.Timedelta(days=1)) if now.time() < TWSE_CLOSE else today
 
 
 def _yf(symbol: str, auto_adjust: bool, period: str = "1y", tries: int = 4) -> pd.DataFrame:
@@ -48,7 +64,8 @@ def update_taiex() -> str:
     df = _read("taiex_twii.csv")
     last = df.index[-1]
     y = _yf("^TWII", auto_adjust=False)
-    new = y[y.index > last][["Open", "High", "Low", "Close"]].dropna()
+    cutoff = _session_cutoff()  # 只收已收盤的交易日,擋 partial today bar
+    new = y[(y.index > last) & (y.index <= cutoff)][["Open", "High", "Low", "Close"]].dropna()
     new.columns = ["open", "high", "low", "close"]
     kept, prev_close = [], float(df["close"].iloc[-1])
     for d, row in new.iterrows():
@@ -94,7 +111,7 @@ def update_etf(ticker: str) -> str:
         return f"{ticker}: no overlap, skip (manual reseam needed)"
     od = overlap[-1]
     scale = float(df.loc[od, "adj"]) / float(y.loc[od])
-    new = y[y.index > last]
+    new = y[(y.index > last) & (y.index <= _session_cutoff())]  # 擋 partial today bar(ETF 同台股交易)
     kept = [(d, round(float(v) * scale, 4)) for d, v in new.items() if np.isfinite(v) and v > 0]
     if not kept:
         return f"{ticker}: 0 new (last {last.date()})"
