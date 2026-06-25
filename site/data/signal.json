@@ -41,8 +41,8 @@
   "status": {
     "stage": "PAPER",
     "lane_health": "GREEN",
-    "deploy_date": "2026-06-19",
-    "note": "TXD paper-lane 起算 2026-06-19(紙上追蹤,非實單對帳)。已過 look-ahead + overfit 兩道稽核;live 期望 Sharpe ~1.35"
+    "deploy_date": "2026-06-17",
+    "note": "TXD paper-lane 起算 2026-06-17(紙上追蹤,非實單對帳)。已過 look-ahead + overfit 兩道稽核;live 期望 Sharpe ~1.35"
   },
   "freshness": {
     "px_index": "2026-06-25",
@@ -59,5 +59,5 @@
     "stale_warn": false,
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做"
   },
-  "generated_at": "2026-06-26T00:38:08+08:00"
+  "generated_at": "2026-06-26T00:46:20+08:00"
 }
