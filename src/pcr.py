@@ -25,6 +25,7 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
+import exchange_calendars as xcals
 
 from src.config import PCR_PAPER_DEPLOY_DATE
 
@@ -74,19 +75,41 @@ def _fetch_taifex(start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["date", "pcr"]).set_index("date").sort_index()
 
 
+def _last_pcr_session(now_tw):
+    """最後一個『P/C 應已發布』的台股交易日(TAIFEX 日 P/C 收盤後出,用 15:00 TWT buffer)。
+    用來區分『今天還沒發布 → 沒新資料(benign)』vs『過去交易日缺 → 真故障(該 raise)』。
+    失敗回 None(退回原 today 行為,不更糟)。"""
+    try:
+        cal = xcals.get_calendar("XTAI")
+        today = pd.Timestamp(now_tw.date())
+        sess = cal.sessions_in_range(today - pd.Timedelta(days=20), today)
+        if len(sess) == 0:
+            return None
+        last = pd.Timestamp(sess[-1])
+        if last.date() == now_tw.date() and now_tw.time() < dtime(15, 0):
+            sess = sess[:-1]  # 今天 P/C 還沒發布(< 15:00)→ 退到前一交易日
+            last = pd.Timestamp(sess[-1]) if len(sess) else None
+        return last
+    except Exception:
+        return None
+
+
 def update_pcr() -> str:
-    """增量:讀現有 csv → 抓最後日期之後到今天 → append、去重、存。
-    只抓最近窗(≤~40 天)避免觸 31 天上限/rapid-loop 擋;seed 之前永不覆寫。"""
+    """增量:讀現有 csv → 抓最後日期之後到『最近已發布交易日』→ append、去重、存。
+    只抓最近窗(≤~40 天)避免觸 31 天上限/rapid-loop 擋;seed 之前永不覆寫。
+    今天 P/C 尚未發布(< 15:00 或非交易日)→ 回『0 new』(benign),不對空結果誤報 FAIL
+    (對稱於 MOVE 絕對新鮮度:把『沒新資料』和『真故障』分開)。"""
     df = pd.read_csv(PCR_CSV, parse_dates=["date"]).set_index("date").sort_index()
     last = df.index[-1]
-    today = pd.Timestamp(datetime.now(TW).date())
-    if today <= last:
-        return f"pcr: 0 new (last {last.date()})"
+    now_tw = datetime.now(TW)
+    cutoff = _last_pcr_session(now_tw) or pd.Timestamp(now_tw.date())
+    if cutoff <= last:
+        return f"pcr: 0 new (last {last.date()})"  # 沒有新的『已發布』交易日 = benign,不 fetch
     start = last + pd.Timedelta(days=1)
-    # 單請求覆蓋 [last+1, today];若 gap > 30 天(久未跑),只抓近 30 天(避範圍上限)
-    if (today - start).days > 30:
-        start = today - pd.Timedelta(days=30)
-    new = _fetch_taifex(start, today)
+    # 單請求覆蓋 [last+1, cutoff];若 gap > 30 天(久未跑),只抓近 30 天(避範圍上限)
+    if (cutoff - start).days > 30:
+        start = cutoff - pd.Timedelta(days=30)
+    new = _fetch_taifex(start, cutoff)  # 此處 empty = 範圍內應有資料卻沒拿到 = 真故障 → raise 才對
     new = new[new.index > last]
     if new.empty:
         return f"pcr: 0 new (last {last.date()})"
