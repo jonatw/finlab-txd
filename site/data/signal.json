@@ -1,8 +1,8 @@
 {
-  "px_as_of": "2026-06-24",
+  "px_as_of": "2026-06-25",
   "move_as_of": "2026-06-24",
-  "for_session": "2026-06-25",
-  "for_session_weekday": "週四",
+  "for_session": "2026-06-26",
+  "for_session_weekday": "週五",
   "for_session_approx": false,
   "target_exposure": 2.0,
   "prev_exposure": 2.0,
@@ -11,11 +11,11 @@
   "pos_text": "台指期 2x 做多",
   "spine": {
     "value": 1.0,
-    "index_close": 46043.6,
+    "index_close": 46255.26,
     "ma": {
-      "60": 40686.18,
-      "120": 36323.98,
-      "200": 32487.0
+      "60": 40905.22,
+      "120": 36478.64,
+      "200": 32596.89
     },
     "above_ma": [
       60,
@@ -26,13 +26,13 @@
   },
   "move": {
     "value": 69.1,
-    "median252": 75.3,
+    "median252": 75.2,
     "regime": "低波加碼",
     "mult": 2
   },
   "dtp": {
-    "percentile": 95.2,
-    "atr_pct": 2.57,
+    "percentile": 92.4,
+    "atr_pct": 2.49,
     "threshold_pct": 4,
     "gated_next": false,
     "regime": "偏高波動",
@@ -45,16 +45,16 @@
     "note": "TXD paper-lane 起算 2026-06-19(紙上追蹤,非實單對帳)。已過 look-ahead + overfit 兩道稽核;live 期望 Sharpe ~1.35"
   },
   "freshness": {
-    "px_index": "2026-06-24",
+    "px_index": "2026-06-25",
     "move": "2026-06-24",
     "curve_stale": false,
-    "market_latest": "2026-06-24",
-    "move_lag_bdays": 0,
-    "expected_last_session": "2026-06-24",
+    "market_latest": "2026-06-25",
+    "move_lag_bdays": 1,
+    "expected_last_session": "2026-06-25",
     "data_lag_sessions": 0,
     "data_stale": false,
     "stale_warn": false,
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示抓取落後實際交易日(可能 Yahoo 抓取失敗)→ 訊號過期, 先別照做"
   },
-  "generated_at": "2026-06-25T09:24:32+08:00"
+  "generated_at": "2026-06-25T15:49:19+08:00"
 }
