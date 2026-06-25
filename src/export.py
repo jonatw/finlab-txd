@@ -52,6 +52,37 @@ def _last_completed_session(now_tw):
         return None
 
 
+def _last_us_session(now_tw, min_hours_since_close=2.0):
+    """當下『MOVE 應已可取得』的最近 XNYS(美股)交易日 — 用來【絕對】比對 move.csv 是否靜默過期。
+    背景:Yahoo bulk daily endpoint 曾靜默回傳過期 ^MOVE bar(fetch 不 raise、只『0 new』),
+    舊 freshness 只比 MOVE vs TAIEX(相對),全來源一起 stale 時看起來『正常』→ CI 抓不到。
+    這裡改用美股交易日曆【絕對】比對(認美股假期如 Juneteenth)。MOVE 美股收盤後 ~30min 上 Yahoo,
+    min_hours buffer 避免早班(剛收盤、aggregate 慢)誤判。失敗回 None(不誤殺)。"""
+    try:
+        cal = xcals.get_calendar("XNYS")
+        now_utc = pd.Timestamp(now_tw.astimezone(ZoneInfo("UTC")))
+        sess = cal.sessions_in_range(pd.Timestamp(now_utc.date()) - pd.Timedelta(days=20),
+                                     pd.Timestamp(now_utc.date()))
+        for s in reversed(list(sess)):
+            close = cal.session_close(pd.Timestamp(s))  # tz-aware UTC
+            if (now_utc - close).total_seconds() >= min_hours_since_close * 3600:
+                return pd.Timestamp(s).tz_localize(None).normalize()
+        return None
+    except Exception:
+        return None
+
+
+def _us_lag_sessions(move_last, expected_us):
+    """move.csv 最後日落後『應有的最近美股收盤日』幾個 XNYS 交易日;0 = 不落後。"""
+    if expected_us is None or expected_us <= move_last:
+        return 0
+    try:
+        cal = xcals.get_calendar("XNYS")
+        return int(len(cal.sessions_in_range(move_last + pd.Timedelta(days=1), expected_us)))
+    except Exception:
+        return int(max(np.busday_count(move_last.date(), expected_us.date()), 0))
+
+
 def _signal_ref(cv_index, now_tw):
     """訊號基準日 = curve 中 ≤『當下已收盤(過 13:30)交易日』的最後一列(時間感知)。
     擋掉 partial today bar / 提前列把 for_session 誤推到隔天。盤前→昨天、收盤後→今天。
@@ -125,6 +156,13 @@ def main(now=None, write=True):
     expected_session = _last_completed_session(now_tw)
     data_lag = _data_lag_sessions(ref, expected_session)
     data_stale = data_lag > 0
+    # 【絕對】MOVE 新鮮度:用美股交易日曆比對 raw move.csv 最後日 → 抓 Yahoo 靜默回傳過期 bar。
+    # 舊的 move_lag 是相對(MOVE vs TAIEX),全來源一起 stale 會被騙過、且只進前端 warn;
+    # 這個比真實 XNYS 收盤日,並進 CI hard-fail gate(末班/手動),才擋得住靜默過期。
+    move_raw_last = pd.Timestamp(move_df.index[-1])
+    expected_us_session = _last_us_session(now_tw)
+    move_us_lag = _us_lag_sessions(move_raw_last, expected_us_session)
+    move_stale = move_us_lag > 0
     for_session, for_session_wd, fs_exact = _next_trading_session(ref)
     exp_sig = cv["exposure"]
     exp_held = exp_sig.shift(1).fillna(0.0)
@@ -156,9 +194,12 @@ def main(now=None, write=True):
                       "move_lag_bdays": move_lag,
                       "expected_last_session": str(expected_session.date()) if expected_session is not None else None,
                       "data_lag_sessions": data_lag, "data_stale": data_stale,
-                      "stale_warn": bool(move_lag > 1 or curve_stale or data_stale),
+                      "expected_us_session": str(expected_us_session.date()) if expected_us_session is not None else None,
+                      "move_us_lag_sessions": move_us_lag, "move_stale": move_stale,
+                      "stale_warn": bool(move_lag > 1 or curve_stale or data_stale or move_stale),
                       "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; "
-                              "data_stale=true 表示抓取落後實際交易日(可能 Yahoo 抓取失敗)→ 訊號過期, 先別照做"},
+                              "data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日"
+                              "(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做"},
         "generated_at": now_tw.isoformat(timespec="seconds"),
     }
 

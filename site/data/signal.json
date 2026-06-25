@@ -53,8 +53,11 @@
     "expected_last_session": "2026-06-25",
     "data_lag_sessions": 0,
     "data_stale": false,
+    "expected_us_session": "2026-06-24",
+    "move_us_lag_sessions": 0,
+    "move_stale": false,
     "stale_warn": false,
-    "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示抓取落後實際交易日(可能 Yahoo 抓取失敗)→ 訊號過期, 先別照做"
+    "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做"
   },
-  "generated_at": "2026-06-25T15:49:19+08:00"
+  "generated_at": "2026-06-26T00:38:08+08:00"
 }

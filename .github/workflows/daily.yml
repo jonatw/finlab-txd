@@ -1,17 +1,20 @@
 name: daily
 # 兩個時點,各有角色:
-#  ① 盤前 00:30 UTC = 08:30 台北(台股 09:00 開盤前):用「隔夜剛更新的 MOVE」重算當日開盤的【權威訊號】。
-#     回測 pos[D]=exposure[D-1]=f(TAIEX[D-1], MOVE[D-1]),而 MOVE[D-1](美債)要美股收盤後才有(~04:00 TWT D)→
-#     只有盤前這班拿得到對齊回測的 MOVE;14:30 收盤那班 MOVE 還慢一個交易日(對下單者是次要的 preliminary)。
-#  ② 收盤後 06:30 UTC = 14:30 台北:推進當日 TAIEX 收盤 + 重試窗(07:30/08:30/09:30),把資料補到最新交易日。
+#  ① 盤前 21:00 UTC = 05:00 台北(早於永豐 06:00 接單窗;越早掛開盤排序越前):用「隔夜剛更新的 MOVE」
+#     算當日開盤的【權威訊號】,讓使用者 6 點一開窗就能掛單。回測 pos[D]=exposure[D-1]=f(TAIEX[D-1], MOVE[D-1]),
+#     MOVE[D-1](美債)美股收盤後 ~04:30 TWT 到 → 05:00 這班拿得到對齊回測的 MOVE;05:30 retry 補 aggregate 慢的情形。
+#     ⚠️ UTC 日要 -1:05:00 TWT 週一 = 21:00 UTC 週日 → day-of-week 用 0-4。
+#  ② 收盤後 06:30 UTC = 14:30 台北:推進當日 TAIEX 收盤 + 重試窗(15:30/16:30/17:30),把資料補到最新交易日。
 # MOVE 為美債、正常晚台股 1 個交易日(freshness 已處理);Yahoo 暫時失敗時重試窗冪等補上(無實質變化不刷 commit)。
+# 早班(05:00/05:30)若 MOVE 尚未 aggregate → 容忍不 hard-fail(後續班補上);只有 17:30 末班/手動仍 stale 才標紅。
 on:
   schedule:
-    - cron: "30 0 * * 1-5"   # 08:30 TWT 盤前 — 用隔夜 MOVE 產生當日開盤【權威訊號】(對齊回測)
-    - cron: "30 6 * * 1-5"   # 14:30 TWT — 收盤後推進 TAIEX + preliminary 次日訊號(MOVE 尚未更新)
-    - cron: "30 7 * * 1-5"   # 15:30 TWT — 重試窗
-    - cron: "30 8 * * 1-5"   # 16:30 TWT — 重試窗
-    - cron: "30 9 * * 1-5"   # 17:30 TWT — 末班;仍 stale 則告警 + job 標紅
+    - cron: "0 21 * * 0-4"    # 05:00 TWT 盤前 — 隔夜 MOVE 產生當日開盤【權威訊號】(6 點下單前;UTC 日 -1)
+    - cron: "30 21 * * 0-4"   # 05:30 TWT — 盤前 retry(05:00 若 MOVE 尚未 aggregate 則補)
+    - cron: "30 6 * * 1-5"    # 14:30 TWT — 收盤後推進 TAIEX + preliminary 次日訊號(MOVE 尚未更新)
+    - cron: "30 7 * * 1-5"    # 15:30 TWT — 重試窗
+    - cron: "30 8 * * 1-5"    # 16:30 TWT — 重試窗
+    - cron: "30 9 * * 1-5"    # 17:30 TWT — 末班;仍 stale 則告警 + job 標紅
   workflow_dispatch:
 permissions:
   contents: write
@@ -47,8 +50,8 @@ jobs:
         run: python scripts/notify_webhook.py
       - name: stale guard (末班/手動仍 stale → 告警 + job 標紅)
         # 重試窗末班(17:30 TWT)或手動觸發時,若訊號仍過期 → 發 stale webhook + 讓 job 失敗(GitHub 通知 + Actions 紅燈)。
-        # 早班的暫時 stale 不在此 gate,避免重試過程誤報。
-        if: ${{ github.event.schedule == '30 0 * * 1-5' || github.event.schedule == '30 9 * * 1-5' || github.event_name == 'workflow_dispatch' }}
+        # 早班(05:00/05:30)的暫時 stale 不在此 gate(MOVE 可能尚未 aggregate),避免重試過程誤報。
+        if: ${{ github.event.schedule == '30 9 * * 1-5' || github.event_name == 'workflow_dispatch' }}
         env:
           WEBHOOK: ${{ vars.NOTIFY_WEBHOOK_URL }}
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
@@ -57,9 +60,16 @@ jobs:
           python - <<'PY'
           import json, sys
           fr = json.load(open("site/data/signal.json"))["freshness"]
+          fail = False
           if fr.get("data_stale"):
-              print(f"::error::TXD 訊號過期 — 最後資料 {fr['px_index']} 但應到 {fr['expected_last_session']}"
-                    f"(落後 {fr['data_lag_sessions']} 個交易日)。Yahoo 抓取可能持續失敗,今日未補出新訊號。")
+              print(f"::error::TXD TAIEX 過期 — 最後 {fr['px_index']} 但應到 {fr['expected_last_session']}"
+                    f"(落後 {fr['data_lag_sessions']} 個台股交易日)。Yahoo 抓取可能持續失敗。")
+              fail = True
+          if fr.get("move_stale"):
+              print(f"::error::TXD ^MOVE 過期 — 最後 {fr['move']} 但應到 {fr['expected_us_session']}"
+                    f"(落後 {fr['move_us_lag_sessions']} 個美股交易日)。Yahoo 靜默回傳過期 bar — repair 仍補不到 = 真故障。")
+              fail = True
+          if fail:
               sys.exit(1)
           print("signal fresh; stale guard OK.")
           PY

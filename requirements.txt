@@ -1,6 +1,7 @@
 pandas==3.0.3
 numpy==2.5.0
 yfinance==1.4.1
+scipy==1.18.0  # yfinance repair=True 需要(修 Yahoo daily endpoint 靜默回傳過期 bar)
 pytest==9.1.1
 jsonschema==4.26.0
 exchange_calendars==4.13.2

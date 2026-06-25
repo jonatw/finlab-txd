@@ -41,7 +41,12 @@ def _yf(symbol: str, auto_adjust: bool, period: str = "1y", tries: int = 4) -> p
     last = None
     for i in range(tries):
         try:
-            df = yf.download(symbol, period=period, progress=False, auto_adjust=auto_adjust)
+            # repair=True 是關鍵:Yahoo bulk daily endpoint 會「靜默回傳過期的最近 bar」——
+            # 實測 ^MOVE 用 yf.download(無 repair) 只回到 06-18,但實際已到 06-24(網站 4:33pm EDT 即有)。
+            # 早上抓不到、下午才補上就是這個 cache 過期。repair=True 觸發 yfinance 完整重抓+修復,
+            # 補回被 cache 漏掉的最新交易日(回 tz-naive index,行為與原本一致)。
+            # append-only 設計保護:repair 即使改寫舊 bar,我們也只取 index > last 的新列。
+            df = yf.download(symbol, period=period, progress=False, auto_adjust=auto_adjust, repair=True)
             if not df.empty:
                 if df.columns.nlevels > 1:
                     df.columns = df.columns.get_level_values(0)

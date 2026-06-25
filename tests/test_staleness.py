@@ -4,7 +4,8 @@
 import datetime
 from zoneinfo import ZoneInfo
 import pandas as pd
-from src.export import _last_completed_session, _data_lag_sessions, main
+from src.export import (_last_completed_session, _data_lag_sessions,
+                        _last_us_session, _us_lag_sessions, main)
 
 TW = ZoneInfo("Asia/Taipei")
 
@@ -38,3 +39,36 @@ def test_generated_at_is_timezone_aware():
     sig = main(now=datetime.datetime(2026, 6, 22, 18, 0, tzinfo=TW), write=False)
     assert sig["generated_at"].endswith("+08:00")          # 不再是 naive
     assert datetime.datetime.fromisoformat(sig["generated_at"]).tzinfo is not None
+
+
+# === 絕對 MOVE 新鮮度(回歸 2026-06-25 事件:yfinance 靜默回傳過期 ^MOVE bar)===
+# 舊 freshness 只比 MOVE vs TAIEX(相對)、且只進前端 warn,全來源一起 stale 時 CI 抓不到。
+# 改用美股交易日曆【絕對】比對 + 進 CI hard-fail gate。
+
+def test_us_lag_counts_xnys_sessions_with_juneteenth():
+    # 6/19 Juneteenth(XNYS 休市)、6/20-21 週末。6/18(四)→ 最近美股交易日 6/22(一)= 落後 1。
+    assert _us_lag_sessions(pd.Timestamp("2026-06-18"), pd.Timestamp("2026-06-22")) == 1
+    # MOVE 凍在 6/22,但美股已到 6/24 → 漏 6/23+6/24 = 落後 2(= 靜默過期 bug 的形狀)。
+    assert _us_lag_sessions(pd.Timestamp("2026-06-22"), pd.Timestamp("2026-06-24")) == 2
+    assert _us_lag_sessions(pd.Timestamp("2026-06-24"), pd.Timestamp("2026-06-24")) == 0
+
+
+def test_last_us_session_expects_prior_us_close_after_buffer():
+    # 台灣 6/25 18:00(美東 6/25 06:00:6/24 收盤 ~14h 前、6/25 尚未開盤)→ expected = 6/24。
+    now = datetime.datetime(2026, 6, 25, 18, 0, tzinfo=TW)
+    assert _last_us_session(now).date() == datetime.date(2026, 6, 24)
+
+
+def test_last_us_session_tolerates_just_closed_bar_in_early_run():
+    # 台灣 6/25 05:30 盤前(美東 6/24 17:30:6/24 才剛收盤 ~1.5h < 2h buffer)→ 仍 expect 6/23,
+    # = 早班容忍 MOVE 尚未 aggregate,不對「剛收盤還沒上 Yahoo」誤判 stale。
+    now = datetime.datetime(2026, 6, 25, 5, 30, tzinfo=TW)
+    assert _last_us_session(now).date() == datetime.date(2026, 6, 23)
+
+
+def test_main_exposes_move_stale_field():
+    # freshness 一定要有 move_stale / expected_us_session(CI gate 讀這個 hard-fail)。
+    sig = main(now=datetime.datetime(2026, 6, 25, 18, 0, tzinfo=TW), write=False)
+    fr = sig["freshness"]
+    assert "move_stale" in fr and "expected_us_session" in fr and "move_us_lag_sessions" in fr
+    assert isinstance(fr["move_stale"], bool)
