@@ -163,16 +163,16 @@ footer b{color:var(--sub)}
 <div class="card" id="sigcard">
  <div class="hero">
   <div class="gaugebox">
-    <h3 style="margin:0 0 4px;font:700 13px var(--mono);letter-spacing:.12em;color:var(--sub)">今日訊號 — 給 <span id="forsess2">—</span> 開盤</h3>
+    <h3 style="margin:0 0 4px;font:700 13px var(--mono);letter-spacing:.12em;color:var(--sub)"><span id="scopetag">今日部位</span> — 給 <span id="forsess2">—</span> 開盤</h3>
     <svg class="gauge" viewBox="0 0 400 235" id="gaugesvg">
       <!-- arcs(0~2x): 由 JS 畫刻度與弧 -->
       <g id="garcs"></g><g id="gticks"></g>
       <line id="ghostN" class="ghost" x1="200" y1="190" x2="200" y2="78" stroke="var(--ice)" stroke-width="2.5" stroke-dasharray="5 5" opacity="0"/>
       <line id="needle" class="needle" x1="200" y1="190" x2="200" y2="64" stroke="var(--amber)" stroke-width="4" stroke-linecap="round"/>
       <circle cx="200" cy="190" r="9" fill="#0a0e13" stroke="var(--amber)" stroke-width="3"/>
-      <text x="200" y="222" text-anchor="middle" class="glab">目標槓桿(明天開盤)</text>
+      <text x="200" y="222" text-anchor="middle" class="glab" id="glabtarget">目標槓桿</text>
     </svg>
-    <div class="fors"><span id="forsess" style="display:none">—</span>今天收盤算、明天開盤動(T+1)</div>
+    <div class="fors"><span id="forsess" style="display:none">—</span><span id="forsline">今天收盤算、明天開盤動(T+1)</span></div>
     <div class="postext" id="postext">—</div>
     <div id="actline" style="margin-top:4px"></div>
     <div class="sub" style="margin-top:6px;font-size:12px">
@@ -581,6 +581,16 @@ function render(){
   const _fs=SIG.for_session+(SIG.for_session_weekday?'（'+SIG.for_session_weekday+'）':'')+(SIG.for_session_approx?' ≈':'');
   $('#forsess').textContent=_fs;
   $('#forsess2').textContent=_fs;
+  /* 標清楚這部位是「給哪一場開盤」的:盤前晨跑 → for_session 就是今天(今日部位);
+     盤後跑 → 是明天/下一交易日。依 for_session 相對今天動態決定,不再寫死「明天開盤」。 */
+  const _fsd=new Date(SIG.for_session+'T00:00:00+08:00');
+  const _now=new Date(), _tdMid=new Date(_now.getFullYear(),_now.getMonth(),_now.getDate());
+  const _dd=Math.round((_fsd-_tdMid)/864e5);
+  const _scope=_dd<=0?'今日部位':(_dd===1?'明日部位':'下一交易日部位');
+  const _openWord=_dd<=0?'今日開盤':(_dd===1?'明日開盤':SIG.for_session+' 開盤');
+  const _st=$('#scopetag'); if(_st)_st.textContent=_scope;
+  const _gl=$('#glabtarget'); if(_gl)_gl.textContent='目標槓桿 · '+_openWord;
+  const _fl=$('#forsline'); if(_fl)_fl.textContent='依 '+SIG.px_as_of+' 收盤算 · 給 '+SIG.for_session+' 開盤動(T+1)';
   $('#postext').textContent=SIG.pos_text;
   requestAnimationFrame(()=>setNeedle($('#needle'),SIG.target_exposure));
   const ac=$('#actline');
