@@ -1,9 +1,16 @@
 """每日增量抓 Yahoo,append 進 data/raw/*.csv。finlab-free、冪等、有壞 tick 防呆。
 
 來源(實測對齊 finlab,見 README):TAIEX=^TWII OHLC、MOVE=^MOVE、ETF=*.TW 還原含息。
-- append-only by date:只抓 csv 最後日期之後的 bar,去重。
-- seed(cutoff 之前)永不覆寫:只 append 新日。
-- 壞 tick gate:high≥close/open≥low、單日 |漲跌|<11%、正值有限 → 不過則拒收該 bar。
+- settling 窗 + append(**僅指數 ^TWII/^MOVE**):重抓「最近 SETTLE_DAYS 個已存交易日 + 新交易日」,
+  允許用 Yahoo 最終值覆寫。更舊的 bar 永不覆寫(保護 seed/history 不被 Yahoo 事後改寫)。
+  ↑ 為何不用純 append-only:純 append(只取 index>last)會把「收盤後仍 preliminary 的盤中捕捉」
+  永久凍結 —— 實測 2026-06-23 ^TWII 被存成盤中早盤值(漲),隔日不再回看而錯到底。settling 窗
+  讓這類 preliminary 捕捉在後續班次自我修復。
+- **ETF 例外維持 append-only**:auto_adjust 含息還原會因除息事後回頭重算整段,重抓舊 bar 反而會用
+  漂移/壞的當下還原值覆寫正確捕捉(實測 0050 6/22 重抓後 +3.59%→+5.33% 錯掉)。只有無除息調整的
+  指數才安全重抓。
+- partial today gate:_session_cutoff 擋掉「今天未過 13:30 收盤」的未完成 bar(現貨/ETF)。
+- 壞 tick gate:high≥close/open≥low、單日 |漲跌|<11%、正值有限 → 不過則保留現有 bar(不丟歷史)。
 - ETF 用 overlap 重算 scale 接縫(finlab 錨點 ≠ Yahoo 錨點,但 return 相同 → 縮放接續)。
 - 任一來源失敗 → 保留現有資料 + 回報 warning,不丟例外(管線不崩)。
 """
@@ -16,6 +23,7 @@ import pandas as pd
 
 RAW = Path(__file__).resolve().parents[1] / "data" / "raw"
 MAX_DAILY_MOVE = 0.11  # 台股 ±10% + buffer
+SETTLE_DAYS = 5        # 最近 N 個已存交易日重抓覆寫(讓 preliminary/盤中捕捉自我修復);更舊不動
 TW = ZoneInfo("Asia/Taipei")
 TWSE_CLOSE = dtime(13, 30)  # 台股現貨收盤
 
@@ -70,37 +78,54 @@ def update_taiex() -> str:
     last = df.index[-1]
     y = _yf("^TWII", auto_adjust=False)
     cutoff = _session_cutoff()  # 只收已收盤的交易日,擋 partial today bar
-    new = y[(y.index > last) & (y.index <= cutoff)][["Open", "High", "Low", "Close"]].dropna()
-    new.columns = ["open", "high", "low", "close"]
-    kept, prev_close = [], float(df["close"].iloc[-1])
-    for d, row in new.iterrows():
+    # settling 窗:重抓最近 SETTLE_DAYS 個已存交易日 + 新交易日 → 允許覆寫 preliminary 捕捉;更舊不動
+    settle_start = df.index[-SETTLE_DAYS] if len(df) > SETTLE_DAYS else df.index[0]
+    cand = y[(y.index >= settle_start) & (y.index <= cutoff)][["Open", "High", "Low", "Close"]].dropna()
+    cand.columns = ["open", "high", "low", "close"]
+    prior = df.index[df.index < settle_start]
+    prev_close = float(df.loc[prior[-1], "close"]) if len(prior) else (float(cand["close"].iloc[0]) if len(cand) else 0.0)
+    kept = []
+    for d, row in cand.iterrows():
         o, h, l, c = float(row.open), float(row.high), float(row.low), float(row.close)
         ok = (h >= l > 0) and (h >= c >= l) and (h >= o >= l) and all(np.isfinite([o, h, l, c]))
         ok = ok and abs(c / prev_close - 1) < MAX_DAILY_MOVE
         if ok:
             kept.append((d, o, h, l, c)); prev_close = c
+        elif d in df.index:          # 壞 fetch → 保留現有 bar(不丟歷史),prev 沿用既有 close
+            prev_close = float(df.loc[d, "close"])
     if not kept:
         return f"taiex: 0 new (last {last.date()})"
     add = pd.DataFrame(kept, columns=["date", "open", "high", "low", "close"]).set_index("date")
     out = pd.concat([df, add]).round(2)
-    out = out[~out.index.duplicated(keep="last")].sort_index()
+    out = out[~out.index.duplicated(keep="last")].sort_index()  # keep=last → 重抓最終值覆寫舊 bar
     out.to_csv(RAW / "taiex_twii.csv")
-    return f"taiex: +{len(add)} → {out.index[-1].date()}"
+    n_new = int((add.index > last).sum()); n_fix = len(add) - n_new
+    return f"taiex: +{n_new} new, {n_fix} refreshed → {out.index[-1].date()}"
 
 
 def update_move() -> str:
     df = _read("move.csv")
     last = df.index[-1]
     y = _yf("^MOVE", auto_adjust=True)
-    new = y[y.index > last]["Close"].dropna()
-    kept = [(d, float(v)) for d, v in new.items() if np.isfinite(v) and v > 0 and abs(v / float(df["move"].iloc[-1]) - 1) < 0.5]
+    settle_start = df.index[-SETTLE_DAYS] if len(df) > SETTLE_DAYS else df.index[0]
+    cand = y[y.index >= settle_start]["Close"].dropna()
+    prior = df.index[df.index < settle_start]
+    prev = float(df.loc[prior[-1], "move"]) if len(prior) else float(df["move"].iloc[-1])
+    kept = []
+    for d, v in cand.items():
+        v = float(v)
+        if np.isfinite(v) and v > 0 and abs(v / prev - 1) < 0.5:
+            kept.append((d, v)); prev = v
+        elif d in df.index:
+            prev = float(df.loc[d, "move"])
     if not kept:
         return f"move: 0 new (last {last.date()})"
     add = pd.DataFrame(kept, columns=["date", "move"]).set_index("date")
     out = pd.concat([df, add]).round(2)
     out = out[~out.index.duplicated(keep="last")].sort_index()
     out.to_csv(RAW / "move.csv")
-    return f"move: +{len(add)} → {out.index[-1].date()}"
+    n_new = int((add.index > last).sum())
+    return f"move: +{n_new} new, {len(add) - n_new} refreshed → {out.index[-1].date()}"
 
 
 def update_etf(ticker: str) -> str:
@@ -116,6 +141,9 @@ def update_etf(ticker: str) -> str:
         return f"{ticker}: no overlap, skip (manual reseam needed)"
     od = overlap[-1]
     scale = float(df.loc[od, "adj"]) / float(y.loc[od])
+    # ⚠️ ETF 不用 settling 窗:auto_adjust=True 是「含息還原」,Yahoo 會因新除息「事後回頭重算」整段
+    #    歷史 → 重抓舊 bar 會用當下(可能已漂移/壞)的還原值覆寫掉原本正確的捕捉(實測 2026-06-22
+    #    0050 重抓後 +3.59%→+5.33% 錯掉)。指數(^TWII/^MOVE 無除息調整)才安全重抓。ETF 維持 append-only。
     new = y[(y.index > last) & (y.index <= _session_cutoff())]  # 擋 partial today bar(ETF 同台股交易)
     kept = [(d, round(float(v) * scale, 4)) for d, v in new.items() if np.isfinite(v) and v > 0]
     if not kept:

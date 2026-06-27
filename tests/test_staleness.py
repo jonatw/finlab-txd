@@ -72,3 +72,31 @@ def test_main_exposes_move_stale_field():
     fr = sig["freshness"]
     assert "move_stale" in fr and "expected_us_session" in fr and "move_us_lag_sessions" in fr
     assert isinstance(fr["move_stale"], bool)
+
+
+def test_settling_window_overwrites_stale_preliminary_bar(tmp_path, monkeypatch):
+    """回歸 2026-06-23 事件:盤中/preliminary ^TWII bar 被 append-only 永久凍結。
+    settling 窗應在後續班次用 Yahoo 最終值覆寫最近 SETTLE_DAYS 內的舊 bar。"""
+    from src import fetch
+    monkeypatch.setattr(fetch, "RAW", tmp_path)
+    # 已存:6/23 被存成「漲」的 preliminary 壞 bar(close 105,實際應為 99)
+    stored = pd.DataFrame(
+        {"open": [100, 100, 104], "high": [100, 100, 105], "low": [100, 100, 104],
+         "close": [100.0, 100.0, 105.0]},
+        index=pd.to_datetime(["2026-06-19", "2026-06-22", "2026-06-23"]),
+    )
+    stored.index.name = "date"; stored.to_csv(tmp_path / "taiex_twii.csv")
+    # Yahoo 最終值:6/23 其實是跌(99)+ 新增 6/24(98)
+    dates = pd.to_datetime(["2026-06-19", "2026-06-22", "2026-06-23", "2026-06-24"])
+    closes = [100.0, 100.0, 99.0, 98.0]
+    fresh = pd.DataFrame(
+        {"Open": closes, "High": [c * 1.001 for c in closes],
+         "Low": [c * 0.999 for c in closes], "Close": closes}, index=dates)
+    monkeypatch.setattr(fetch, "_yf", lambda *a, **k: fresh)
+    monkeypatch.setattr(fetch, "_session_cutoff", lambda *a, **k: pd.Timestamp("2026-06-24"))
+
+    msg = fetch.update_taiex()
+    out = pd.read_csv(tmp_path / "taiex_twii.csv", parse_dates=["date"]).set_index("date")
+    assert out.loc["2026-06-23", "close"] == 99.0, "stale 6/23 應被最終值覆寫"
+    assert out.loc["2026-06-24", "close"] == 98.0, "新交易日應 append"
+    assert "refreshed" in msg
