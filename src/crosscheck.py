@@ -137,20 +137,25 @@ def run() -> dict:
                         "note": "stored含息 vs TWSE 不符,但股利抓取失敗無法還原 → 人工 review"})
                 continue
             # 自動修正:從第一個壞 bar 起,沿正確前值用「重建含息報酬」重算 level(校正 level 位移)
-            p0 = adj.index.get_loc(bad[0])
+            # ⚠️ 已知限度(display-only):若 yfinance 在某除息日「靜默漏掉」配息,recon 會少加配息 →
+            #    可能把正確含息 bar 判壞並修掉配息。display-only(不餵策略)、下次抓到即自癒;故不擋。
+            p0 = adj.index.get_loc(bad[0]); rng = adj.index[p0:]
+            if any((d not in tc.index or pd.isna(recon.get(d))) for d in rng):  # 重建窗內 TWSE 有缺 → 不部分重建(免留 kink),改 flag
+                for d in bad:
+                    rep["etf_flags"].append({"etf": no, "date": str(d.date()),
+                        "stored_ret_pct": round(sret[d] * 100, 2), "twse_raw_ret_pct": round(raw_ret[d] * 100, 2),
+                        "note": "重建窗內 TWSE 有缺日,不部分重建 → 人工 review"})
+                continue
             old_last = round(float(adj.iloc[-1]), 4); cur = float(adj.iloc[p0 - 1])
-            for i in range(p0, len(adj)):
-                d = adj.index[i]
-                if d not in tc.index or pd.isna(recon.get(d)):
-                    break
-                cur *= (1 + recon[d]); adj.iloc[i] = round(cur, 4)
+            for d in rng:
+                cur *= (1 + recon[d]); adj.loc[d] = round(cur, 4)
             st["adj"] = adj; st.round(4).to_csv(path)
-            rep["etf_corrections"].append({"etf": no, "from": str(bad[0].date()), "n_bars": len(adj) - p0,
+            rep["etf_corrections"].append({"etf": no, "from": str(bad[0].date()), "n_bars": len(rng),
                 "old_last_close": old_last, "new_last_close": round(float(adj.iloc[-1]), 4)})
         rep["validated"] = True
-    except Exception as e:  # noqa: BLE001
-        rep = {"validated": False, "skipped": True, "error": str(e)[:140],
-               "taiex_corrections": [], "etf_corrections": [], "etf_flags": [], "etf_exdiv": []}
+    except Exception as e:  # noqa: BLE001 — 保留已累積的修正記錄(別讓後段例外抹掉前段已寫檔的 audit trail)
+        rep["skipped"] = True
+        rep["error"] = str(e)[:140]
     rep["mismatch"] = bool(rep["etf_flags"])
     DERIVED.mkdir(parents=True, exist_ok=True)
     XCHECK.write_text(json.dumps(rep, ensure_ascii=False, indent=2))

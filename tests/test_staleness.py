@@ -169,3 +169,25 @@ def test_crosscheck_flags_etf_when_dividend_fetch_fails(tmp_path, monkeypatch):
     before = pd.read_csv(tmp_path / "etf_0050.csv", parse_dates=["date"]).set_index("date")["adj"]
     assert before.loc["2026-06-23"] == 105.0                   # 未自動改
     assert any(f["etf"] == "0050" for f in r["etf_flags"]) and r["mismatch"] is True
+
+
+def test_settling_bad_bar_does_not_cascade_block_later_legit_bar(tmp_path, monkeypatch):
+    """回歸 audit Bug1:settling 窗內某 bar 被壞-tick gate 拒,不應把錨點污染成壞 stored 值
+    而連鎖擋掉之後的 legit bar(gap-scaled 容許窗修正)。"""
+    from src import fetch
+    monkeypatch.setattr(fetch, "RAW", tmp_path)
+    # stored 6/23 是壞 preliminary(150);6/18/6/22 正常 100
+    pd.DataFrame({"open": [100, 100, 150], "high": [100, 100, 150], "low": [100, 100, 150],
+                  "close": [100.0, 100.0, 150.0]},
+                 index=pd.to_datetime(["2026-06-18", "2026-06-22", "2026-06-23"])
+                 ).rename_axis("date").to_csv(tmp_path / "taiex_twii.csv")
+    # re-fetch:6/23 仍 corrupt(151,被拒);6/24 是 legit(100)
+    dates = pd.to_datetime(["2026-06-18", "2026-06-22", "2026-06-23", "2026-06-24"])
+    fresh = pd.DataFrame({"Open": [100, 100, 150, 100], "High": [100, 100, 200, 100],
+                          "Low": [100, 100, 100, 100], "Close": [100.0, 100.0, 151.0, 100.0]}, index=dates)
+    monkeypatch.setattr(fetch, "_yf", lambda *a, **k: fresh)
+    monkeypatch.setattr(fetch, "_session_cutoff", lambda *a, **k: pd.Timestamp("2026-06-24"))
+    fetch.update_taiex()
+    out = pd.read_csv(tmp_path / "taiex_twii.csv", parse_dates=["date"]).set_index("date")
+    assert out.loc["2026-06-24", "close"] == 100.0   # legit 6/24 仍被 append(未被 6/23 壞 bar 連鎖擋掉)
+    assert out.loc["2026-06-23", "close"] == 150.0   # 壞 re-fetch 被拒 → 保留 stored

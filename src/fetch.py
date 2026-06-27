@@ -83,16 +83,16 @@ def update_taiex() -> str:
     cand = y[(y.index >= settle_start) & (y.index <= cutoff)][["Open", "High", "Low", "Close"]].dropna()
     cand.columns = ["open", "high", "low", "close"]
     prior = df.index[df.index < settle_start]
-    prev_close = float(df.loc[prior[-1], "close"]) if len(prior) else (float(cand["close"].iloc[0]) if len(cand) else 0.0)
-    kept = []
+    last_good = float(df.loc[prior[-1], "close"]) if len(prior) else (float(cand["close"].iloc[0]) if len(cand) else 0.0)
+    kept, gap = [], 1
     for d, row in cand.iterrows():
         o, h, l, c = float(row.open), float(row.high), float(row.low), float(row.close)
         ok = (h >= l > 0) and (h >= c >= l) and (h >= o >= l) and all(np.isfinite([o, h, l, c]))
-        ok = ok and abs(c / prev_close - 1) < MAX_DAILY_MOVE
+        ok = ok and abs(c / last_good - 1) < MAX_DAILY_MOVE * gap  # gap>1:前一 bar 被拒→容許跨日 move,免單一壞 bar 連鎖擋掉後續 legit bar
         if ok:
-            kept.append((d, o, h, l, c)); prev_close = c
-        elif d in df.index:          # 壞 fetch → 保留現有 bar(不丟歷史),prev 沿用既有 close
-            prev_close = float(df.loc[d, "close"])
+            kept.append((d, o, h, l, c)); last_good = c; gap = 1
+        else:
+            gap += 1                  # 此 bar 被拒(stored 經 concat keep=last 保留)→ 下一 bar 容許窗 +1 日
     if not kept:
         return f"taiex: 0 new (last {last.date()})"
     add = pd.DataFrame(kept, columns=["date", "open", "high", "low", "close"]).set_index("date")
@@ -110,14 +110,14 @@ def update_move() -> str:
     settle_start = df.index[-SETTLE_DAYS] if len(df) > SETTLE_DAYS else df.index[0]
     cand = y[y.index >= settle_start]["Close"].dropna()
     prior = df.index[df.index < settle_start]
-    prev = float(df.loc[prior[-1], "move"]) if len(prior) else float(df["move"].iloc[-1])
-    kept = []
+    last_good = float(df.loc[prior[-1], "move"]) if len(prior) else float(df["move"].iloc[-1])
+    kept, gap = [], 1
     for d, v in cand.items():
         v = float(v)
-        if np.isfinite(v) and v > 0 and abs(v / prev - 1) < 0.5:
-            kept.append((d, v)); prev = v
-        elif d in df.index:
-            prev = float(df.loc[d, "move"])
+        if np.isfinite(v) and v > 0 and abs(v / last_good - 1) < 0.5 * gap:  # gap-scaled:免單一壞 bar 連鎖擋掉後續 legit bar
+            kept.append((d, v)); last_good = v; gap = 1
+        else:
+            gap += 1
     if not kept:
         return f"move: 0 new (last {last.date()})"
     add = pd.DataFrame(kept, columns=["date", "move"]).set_index("date")
