@@ -69,7 +69,20 @@ jobs:
               print(f"::error::TXD ^MOVE 過期 — 最後 {fr['move']} 但應到 {fr['expected_us_session']}"
                     f"(落後 {fr['move_us_lag_sessions']} 個美股交易日)。Yahoo 靜默回傳過期 bar — repair 仍補不到 = 真故障。")
               fail = True
+          # 多源交叉驗證(TWSE 官方):TAIEX 已自動修正(僅告知);ETF 對照線不符 → 告警人工 review(非策略輸入,不擋部署)
+          xc = fr.get("xcheck", {})
+          for c in xc.get("taiex_corrections", []):
+              print(f"::warning::TXD TAIEX {c['date']} 已自動以 TWSE 官方修正 {c['old_close']}→{c['new_close']}"
+                    f"(Yahoo {c['yahoo_ret_pct']}% vs TWSE {c['twse_ret_pct']}%)— 策略輸入已用權威源校正")
+          for c in xc.get("etf_corrections", []):
+              print(f"::warning::TXD ETF {c['etf']} 含息已自動以 TWSE(raw+股利)重建 自 {c['from']}"
+                    f"({c['n_bars']} bars,末值 {c['old_last_close']}→{c['new_last_close']})")
+          for f in xc.get("etf_flags", []):
+              print(f"::warning::TXD ETF {f['etf']} {f['date']} 與 TWSE 不符且股利抓取失敗 "
+                    f"(stored {f['stored_ret_pct']}% vs TWSE raw {f.get('twse_raw_ret_pct')}%)— 人工 review")
           if fail:
               sys.exit(1)
-          print("signal fresh; stale guard OK.")
+          print(f"signal fresh; stale guard OK. xcheck validated={xc.get('validated')} "
+                f"taiex_fixed={len(xc.get('taiex_corrections', []))} etf_fixed={len(xc.get('etf_corrections', []))} "
+                f"etf_flags={len(xc.get('etf_flags', []))}.")
           PY

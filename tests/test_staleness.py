@@ -100,3 +100,72 @@ def test_settling_window_overwrites_stale_preliminary_bar(tmp_path, monkeypatch)
     assert out.loc["2026-06-23", "close"] == 99.0, "stale 6/23 應被最終值覆寫"
     assert out.loc["2026-06-24", "close"] == 98.0, "新交易日應 append"
     assert "refreshed" in msg
+
+
+def _seed_xc(xc, tmp_path, monkeypatch):
+    monkeypatch.setattr(xc, "RAW", tmp_path)
+    monkeypatch.setattr(xc, "DERIVED", tmp_path)
+    monkeypatch.setattr(xc, "XCHECK", tmp_path / "xcheck.json")
+    monkeypatch.setattr(xc, "ETFS", ("0050",))
+
+
+def test_crosscheck_autocorrects_taiex_and_etf(tmp_path, monkeypatch):
+    """多源驗證:TAIEX 不符 → 覆寫;ETF 含息不符 → 用 TWSE(raw+股利)重建自動修正 level。"""
+    from src import crosscheck as xc
+    _seed_xc(xc, tmp_path, monkeypatch)
+    dates = pd.to_datetime(["2026-06-22", "2026-06-23", "2026-06-24"])
+    # stored 6/23 是「漲」的壞 bar;TWSE 權威是「跌」
+    pd.DataFrame({"open": [100, 104, 101], "high": [100, 105, 101], "low": [100, 104, 101],
+                  "close": [100.0, 105.0, 103.0]}, index=dates).rename_axis("date").to_csv(tmp_path / "taiex_twii.csv")
+    pd.DataFrame({"adj": [100.0, 105.0, 103.0]}, index=dates).rename_axis("date").to_csv(tmp_path / "etf_0050.csv")
+    tw_tx = pd.DataFrame({"open": [100, 103, 101], "high": [100, 103, 101], "low": [100, 99, 101],
+                          "close": [100.0, 99.0, 97.0]}, index=dates)
+    monkeypatch.setattr(xc, "twse_taiex", lambda last: tw_tx)
+    monkeypatch.setattr(xc, "twse_close", lambda no, last: pd.Series([100.0, 99.0, 97.0], index=dates))
+    monkeypatch.setattr(xc, "etf_distributions", lambda no: ({}, True))
+    r = xc.run()
+    fixed = pd.read_csv(tmp_path / "taiex_twii.csv", parse_dates=["date"]).set_index("date")
+    assert fixed.loc["2026-06-23", "close"] == 99.0           # TAIEX 自動覆寫
+    assert len(r["taiex_corrections"]) == 1
+    etf = pd.read_csv(tmp_path / "etf_0050.csv", parse_dates=["date"]).set_index("date")["adj"]
+    assert abs(etf.loc["2026-06-23"] - 99.0) < 1e-6           # ETF 含息重建:100×(1-1%)=99
+    assert abs(etf.loc["2026-06-24"] - 97.0) < 1e-6           # 連帶 level 位移也校正
+    assert any(c["etf"] == "0050" for c in r["etf_corrections"])
+    assert not r["etf_flags"] and r["mismatch"] is False
+
+
+def test_crosscheck_suppresses_exdiv_on_etf(tmp_path, monkeypatch):
+    """ETF 除息日:重建含息報酬=raw+股利 與 stored 相符 → 不修正、不誤報(記 etf_exdiv)。"""
+    from src import crosscheck as xc
+    _seed_xc(xc, tmp_path, monkeypatch)
+    dates = pd.to_datetime(["2026-06-22", "2026-06-23"])
+    monkeypatch.setattr(xc, "twse_taiex", lambda last: pd.DataFrame(
+        {"open": [100, 100], "high": [100, 100], "low": [100, 100], "close": [100.0, 100.0]}, index=dates))
+    # stored含息 6/23 = -1%(含回息);TWSE raw = -3%;股利=2(prev 100 → 2%)→ 重建 = -1% = 相符
+    pd.DataFrame({"open": [100, 100], "high": [100, 100], "low": [100, 100], "close": [100.0, 100.0]},
+                 index=dates).rename_axis("date").to_csv(tmp_path / "taiex_twii.csv")
+    pd.DataFrame({"adj": [100.0, 99.0]}, index=dates).rename_axis("date").to_csv(tmp_path / "etf_0050.csv")
+    monkeypatch.setattr(xc, "twse_close", lambda no, last: pd.Series([100.0, 97.0], index=dates))
+    monkeypatch.setattr(xc, "etf_distributions", lambda no: ({pd.Timestamp("2026-06-23"): 2.0}, True))
+    r = xc.run()
+    assert not r["etf_flags"] and not r["etf_corrections"]     # 相符 → 不動
+    assert any(e["etf"] == "0050" for e in r["etf_exdiv"])     # 認出是除息
+    assert r["mismatch"] is False
+
+
+def test_crosscheck_flags_etf_when_dividend_fetch_fails(tmp_path, monkeypatch):
+    """股利抓取失敗(divs_ok=False)→ 不自動改 ETF(避免誤剝股利),改 flag 交人工。"""
+    from src import crosscheck as xc
+    _seed_xc(xc, tmp_path, monkeypatch)
+    dates = pd.to_datetime(["2026-06-22", "2026-06-23"])
+    monkeypatch.setattr(xc, "twse_taiex", lambda last: pd.DataFrame(
+        {"open": [100, 100], "high": [100, 100], "low": [100, 100], "close": [100.0, 100.0]}, index=dates))
+    pd.DataFrame({"open": [100, 100], "high": [100, 100], "low": [100, 100], "close": [100.0, 100.0]},
+                 index=dates).rename_axis("date").to_csv(tmp_path / "taiex_twii.csv")
+    pd.DataFrame({"adj": [100.0, 105.0]}, index=dates).rename_axis("date").to_csv(tmp_path / "etf_0050.csv")
+    monkeypatch.setattr(xc, "twse_close", lambda no, last: pd.Series([100.0, 99.0], index=dates))
+    monkeypatch.setattr(xc, "etf_distributions", lambda no: ({}, False))   # 抓取失敗
+    r = xc.run()
+    before = pd.read_csv(tmp_path / "etf_0050.csv", parse_dates=["date"]).set_index("date")["adj"]
+    assert before.loc["2026-06-23"] == 105.0                   # 未自動改
+    assert any(f["etf"] == "0050" for f in r["etf_flags"]) and r["mismatch"] is True

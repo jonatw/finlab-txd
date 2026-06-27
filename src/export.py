@@ -172,6 +172,17 @@ def main(now=None, write=True):
     changed = abs(target - prev) > 1e-9
     action = "不需調倉" if not changed else ("加碼" if target > prev else "減碼")
 
+    try:  # 多源交叉驗證結果(crosscheck.run 寫的);讀不到 → 視為未驗證
+        _xc = json.loads((Path(__file__).resolve().parents[1] / "data/derived/xcheck.json").read_text())
+        xcheck = {"validated": _xc.get("validated"), "skipped": _xc.get("skipped", False),
+                  "mismatch": _xc.get("mismatch", False),
+                  "taiex_corrections": _xc.get("taiex_corrections", []),
+                  "etf_corrections": _xc.get("etf_corrections", []),
+                  "etf_flags": _xc.get("etf_flags", [])}
+    except Exception:
+        xcheck = {"validated": None, "skipped": True, "mismatch": False,
+                  "taiex_corrections": [], "etf_corrections": [], "etf_flags": []}
+
     signal = {
         "px_as_of": str(ref.date()), "move_as_of": str(move_as_of.date()),
         "for_session": str(for_session.date()), "for_session_weekday": for_session_wd, "for_session_approx": not fs_exact,
@@ -197,9 +208,11 @@ def main(now=None, write=True):
                       "expected_us_session": str(expected_us_session.date()) if expected_us_session is not None else None,
                       "move_us_lag_sessions": move_us_lag, "move_stale": move_stale,
                       "stale_warn": bool(move_lag > 1 or curve_stale or data_stale or move_stale),
+                      "xcheck": xcheck,
                       "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; "
                               "data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日"
-                              "(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做"},
+                              "(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做; "
+                              "xcheck = TWSE 官方多源驗證(TAIEX 不符自動修正、ETF 不符 flag);xcheck.mismatch=true → ETF 對照線疑壞,人工 review"},
         "generated_at": now_tw.isoformat(timespec="seconds"),
     }
 
