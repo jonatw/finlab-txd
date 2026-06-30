@@ -1,21 +1,21 @@
 {
-  "px_as_of": "2026-06-29",
+  "px_as_of": "2026-06-30",
   "move_as_of": "2026-06-29",
-  "for_session": "2026-06-30",
-  "for_session_weekday": "週二",
+  "for_session": "2026-07-01",
+  "for_session_weekday": "週三",
   "for_session_approx": false,
-  "target_exposure": 2.0,
-  "prev_exposure": 0.0,
+  "target_exposure": 0.0,
+  "prev_exposure": 2.0,
   "changed": true,
-  "action": "加碼",
-  "pos_text": "台指期 2x 做多",
+  "action": "減碼",
+  "pos_text": "🚨 高波動關機 / 空手",
   "spine": {
     "value": 1.0,
-    "index_close": 45049.65,
+    "index_close": 46125.91,
     "ma": {
-      "60": 41311.84,
-      "120": 36746.79,
-      "200": 32795.96
+      "60": 41526.86,
+      "120": 36894.32,
+      "200": 32905.16
     },
     "above_ma": [
       60,
@@ -26,16 +26,16 @@
   },
   "move": {
     "value": 68.1,
-    "median252": 75.1,
+    "median252": 75.0,
     "regime": "低波加碼",
     "mult": 2
   },
   "dtp": {
-    "percentile": 95.6,
-    "atr_pct": 2.58,
+    "percentile": 96.0,
+    "atr_pct": 2.6,
     "threshold_pct": 4,
-    "gated_next": false,
-    "regime": "偏高波動",
+    "gated_next": true,
+    "regime": "🚨 市場發瘋(關機)",
     "note": "DTP% = ATR(14)% 佔收盤的 250 日百分位; ≥ top-4% = 發瘋日, 次一交易日空手"
   },
   "status": {
@@ -45,21 +45,21 @@
     "note": "TXD paper-lane 起算 2026-06-17(紙上追蹤,非實單對帳)。已過 look-ahead + overfit 兩道稽核;live 期望 Sharpe ~1.35"
   },
   "freshness": {
-    "px_index": "2026-06-29",
+    "px_index": "2026-06-30",
     "move": "2026-06-29",
     "curve_stale": false,
-    "market_latest": "2026-06-29",
-    "move_lag_bdays": 0,
-    "expected_last_session": "2026-06-29",
+    "market_latest": "2026-06-30",
+    "move_lag_bdays": 1,
+    "expected_last_session": "2026-06-30",
     "data_lag_sessions": 0,
     "data_stale": false,
-    "expected_us_session": "2026-06-26",
+    "expected_us_session": "2026-06-29",
     "move_us_lag_sessions": 0,
     "move_stale": false,
     "stale_warn": false,
     "xcheck": {
-      "validated": true,
-      "skipped": false,
+      "validated": false,
+      "skipped": true,
       "mismatch": false,
       "taiex_corrections": [],
       "etf_corrections": [],
@@ -67,5 +67,5 @@
     },
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做; xcheck = TWSE 官方多源驗證(TAIEX 不符自動修正、ETF 不符 flag);xcheck.mismatch=true → ETF 對照線疑壞,人工 review"
   },
-  "generated_at": "2026-06-30T05:35:19+08:00"
+  "generated_at": "2026-06-30T16:37:55+08:00"
 }
