@@ -225,7 +225,9 @@ footer b{color:var(--sub)}
       <div class="sub" style="font-size:11px">差距條:超過 <span class="mono">0.67</span> 金線才值得動(微調忽略 — 微台整數口本來就反映不出 ⅓ 倉)</div>
     </div>
   </div>
-  <div class="note">這是<b>槓桿旋鈕</b>不是股票:2x→1x 是把旋鈕轉小、<b>仍持有 1 倍繼續賺</b>,不是清倉逃跑;只有目標 = 0 才真空手。<br><span id="freqline"></span></div>
+  <div class="note">這是<b>槓桿旋鈕</b>不是股票:2x→1x 是把旋鈕轉小、<b>仍持有 1 倍繼續賺</b>,不是清倉逃跑;只有目標 = 0 才真空手。<br>
+  <b>口數是「算出來的輸出」,不是你固定抱的東西</b>:權益跌 → 同樣 2x 目標下該放的口數自動變少;DTP 關機 → 0 口。你抱的是固定<b>槓桿</b>,不是固定口數 —— 上次放 1 小台 2 微台、這次權益少了還照抄,就會偷偷變超過 2x。<br>
+  <b>回撤後 / DTP 翻回重進場的 SOP:</b>先把下面兩格更新成<b>你現在的最新權益</b> + <b>現在的指數</b>,再輸入「我現在持有幾倍」→ 錶會告訴你動不動。<br><span id="freqline"></span></div>
   <div class="inrow" style="margin-top:16px">
     <div><label>策略總資金(期貨戶權益)</label><input id="navin" type="number" value="1500000"></div>
     <div><label>台指期現價 <button id="alignpx" type="button" style="font:600 10.5px var(--sans);color:var(--sub);background:none;border:1px solid var(--hair);border-radius:5px;padding:1px 6px;cursor:pointer;vertical-align:middle" title="帶入最新加權指數收盤(與台指期有小基差;精確下單以券商即時報價為準)">↻ 帶最新</button></label><input id="taiex" type="number" value="45070"></div>
@@ -654,26 +656,46 @@ function render(){
 
   const calcCtr=()=>{const t=SIG.target_exposure,nv=+$('#navin').value,tx=+$('#taiex').value;
     if(!nv||!tx){$('#ctr').textContent='';return;}
-    if(t===0){$('#ctr').innerHTML='<b>目標 0x → 全平倉,不持有任何合約</b>';return;}
+    if(t===0){const myv=parseFloat($('#myexp').value); let s='';
+      if(!isNaN(myv)&&myv>0&&nv&&tx>3000){const cu=Math.round(myv*nv/(tx*10));
+        const d=u=>{const bg=Math.floor(u/20),r1=u-20*bg,sm=Math.floor(r1/5),mi=r1-5*sm;return[['大台',bg],['小台',sm],['微台',mi]].filter(([,c])=>c>0).map(([n,c])=>`${n} ${c} 口`).join(' + ')||'0 口';};
+        s=` — <span class="pill p-amb">這樣做</span> 賣掉手上全部 <b>${d(cu)}</b> → 0 口`;}
+      $('#ctr').innerHTML=`<b>DTP 關機 / 目標 0x → 全平倉,不持有任何合約</b>${s}`;return;}
     if(tx<3000||tx>200000){$('#ctr').innerHTML=`<div class="sub">台指期現價 ${fmt(tx)} 看起來不像完整數字(合理範圍約 3,000~200,000)— 還沒打完?</div>`;return;}
     const target=t*nv;                         // 目標名目
-    const mU=target/(tx*10);                   // 微台當量(1小台=5微台, 1大台=20微台)
-    const opts=[];
-    const mk=(name,counts,units)=>{const nC=counts.reduce((a,[,c])=>a+c,0);
-      if(nC===0)return; const achv=units*(tx*10), ax=achv/nv;
-      opts.push({name,counts,nC,units,ax});};
-    mk('純微台',[['微台',Math.floor(mU)]],Math.floor(mU));
-    if(mU>=5){const sm=Math.floor(mU/5),mi=Math.floor(mU-5*sm);mk('小台+微台混搭',[['小台',sm],['微台',mi]],sm*5+mi);}
-    if(mU>=20){const bg=Math.floor(mU/20),rm=mU-20*bg,sm=Math.floor(rm/5),mi=Math.floor(rm-5*sm);
-      mk('大台混搭',[['大台',bg],['小台',sm],['微台',mi]],bg*20+sm*5+mi);}
-    if(!opts.length){$('#ctr').innerHTML=`<div class="sub">目標 ${t}x = 名目 ${fmt(target)} 元 — 不足一口微台(第一口約需本金 ${fmt(Math.ceil(tx*10/t))} 元)。數字還沒打完?打完就會出現建議。</div>`;return;}
-    const best=opts.reduce((a,b)=>b.units>a.units||(b.units===a.units&&b.nC<a.nC)?b:a,opts[0]);
-    let html=`<div class="sub" style="margin-bottom:4px">目標 ${t}x = 名目 ${fmt(target)} 元(${mU.toFixed(1)} 口微台當量)</div>`;
-    html+=opts.map(o=>{const lots=o.counts.filter(([,c])=>c>0).map(([n,c])=>`${n} <b class="num">${c}</b> 口`).join(' + ')||'0 口';
-      const err=t-o.ax;
-      return `<div style="margin:3px 0">${o===best?'<span class="pill p-amb">建議</span> ':'<span style="display:inline-block;width:54px"></span>'}${lots}
-        <span class="sub">→ 實際 ${o.ax.toFixed(2)}x(差 ${err>=0?'-':'+'}${Math.abs(err).toFixed(2)})· 共 ${o.nC} 口</span></div>`;}).join('');
-    if(best.ax<t-0.15)html+=`<div class="sub" style="color:var(--amber);font-size:12px">⚠️ 顆粒度提醒:帳戶規模下湊不滿目標(差 ${(t-best.ax).toFixed(2)}x),這是微台存在的理由 — 帳戶越小越只能用微台。</div>`;
+    const mU=target/(tx*10);                   // 微台當量(連續;1小台=5微台、1大台=20微台)
+    const decomp=u=>{const bg=Math.floor(u/20),r1=u-20*bg,sm=Math.floor(r1/5),mi=r1-5*sm;return[['大台',bg],['小台',sm],['微台',mi]];};
+    const lotsHtml=u=>decomp(u).filter(([,c])=>c>0).map(([n,c])=>`${n} <b class="num">${c}</b> 口`).join(' + ')||'0 口';
+    const nUnits=u=>decomp(u).reduce((a,[,c])=>a+c,0);
+    const floorU=Math.floor(mU+1e-9), ceilU=Math.ceil(mU-1e-9);
+    if(floorU<1 && ceilU<1){$('#ctr').innerHTML=`<div class="sub">目標 ${t}x = 名目 ${fmt(target)} 元 — 不足一口微台(第一口約需本金 ${fmt(Math.ceil(tx*10/t))} 元)。數字還沒打完?打完就會出現建議。</div>`;return;}
+    const best={counts:decomp(Math.max(floorU,1)).filter(([,c])=>c>0),units:Math.max(floorU,1)};  // 風險估算用 floor(守上限)
+    const rows=[];
+    const push=(u,rec)=>{if(u<1)return; rows.push({u,ax:u*tx*10/nv,rec,n:nUnits(u)});};
+    push(floorU,true);                          // floor = 建議(永不超過 2x 上限、寧可少開)
+    if(ceilU!==floorU)push(ceilU,false);        // ceil = 最貼近目標(略超)
+    let html=`<div class="sub" style="margin-bottom:4px">目標 ${t}x = 名目 ${fmt(target)} 元(精確需 <b>${mU.toFixed(2)}</b> 口微台當量 — 整數湊不剛好很正常,下面兩個自己挑)</div>`;
+    html+=rows.map(o=>`<div style="margin:3px 0">${o.rec?'<span class="pill p-amb">建議 · 守 ≤2x</span>':'<span class="pill p-mut">可選 · 微超</span>'} ${lotsHtml(o.u)}
+        <span class="sub">→ 實際 <b>${o.ax.toFixed(2)}x</b>(差 ${(o.ax-t)>=0?'+':'-'}${Math.abs(o.ax-t).toFixed(2)})· 共 ${o.n} 口</span></div>`).join('');
+    html+=`<div class="sub" style="font-size:11px;margin-top:4px">兩個都落在 <b>0.67 金線</b>內 → 都算對,<b>你自己選</b>:守紀律挑<b>建議(floor、不超過 2x 上限)</b>;想貼目標挑<b>微超</b>。每多一口微台 ≈ <b>${(tx*10/nv).toFixed(2)}x</b>,湊不到正好 2x 是顆粒度(本金越大顆粒越細)。風險數字下面按<b>建議(floor)</b>方案估;選微超的話保證金/緩衝會再略緊一點。</div>`;
+    // ── 從你現在換到目標:明確買/賣(含「賣大買小」換倉) ──
+    const myv=parseFloat($('#myexp').value);
+    if(!isNaN(myv)&&myv>=0){
+      const curU=Math.round(myv*nv/(tx*10));               // 你現在的微台當量(由倍數反推)
+      const tgtU=floorU;                                   // 調倉目標 = 建議(floor、守上限)
+      const cm=Object.fromEntries(decomp(curU)), tm=Object.fromEntries(decomp(tgtU));
+      const moves=['大台','小台','微台'].map(n=>[n,(tm[n]||0)-(cm[n]||0)]).filter(([,c])=>c!==0);
+      const sells=moves.filter(([,c])=>c<0).map(([n,c])=>`賣 <b>${n} ${-c}</b> 口`);
+      const buys =moves.filter(([,c])=>c>0).map(([n,c])=>`買 <b>${n} ${c}</b> 口`);
+      const swap=sells.length&&buys.length, act=Math.abs(myv-t)>=0.67-1e-9;
+      let tH;
+      if(t===0) tH=`<span class="pill p-amb">DTP 關機 → 全平倉</span> 賣掉手上全部 ${lotsHtml(curU)} → <b>0 口</b>`;
+      else if(!act) tH=`<span class="pill p-grn">不用換</span> 你 ${myv}x 與目標 ${t}x 差 ${Math.abs(myv-t).toFixed(2)} &lt; 0.67 金線 — 別為了幾 % 的飄移重下單`;
+      else if(!moves.length) tH=`<span class="pill p-grn">不用換</span> 你現在 ${lotsHtml(curU)} 已等於目標`;
+      else tH=`<span class="pill p-amb">這樣換</span> 從 ${lotsHtml(curU)}(${myv}x)→ ${lotsHtml(tgtU)}(${(tgtU*tx*10/nv).toFixed(2)}x):${[...sells,...buys].join('、')}${swap?` <span class="sub">← <b>換倉</b>:手上微台不夠減,<b>賣大買小</b>湊到目標(同一筆一起送)</span>`:''}`;
+      html+=`<div style="border-top:1px dashed var(--hair);margin-top:10px;padding-top:8px"><b style="font-size:13px">怎麼從現在換到目標</b>(向上加倉 / 向下減倉都看這)<br>${tH}
+        <div class="sub" style="font-size:11px;margin-top:4px">用你上面「我現在持有幾倍」反推現有口數;<b>若你手上合約組合跟這裡不同,以「先湊到目標總口數」為準</b>自行換算(微台不夠減就賣一口小台/大台、買回等值微台)。</div></div>`;
+    }
     // ── 風險管理: 保證金/緩衝/距追繳/壓力測試(對建議方案) ──
     const mbIn=$('#marginBig'); const mbDefault=Math.round(tx*200*0.10/1000)*1000;
     if(!mbIn.dataset.touched)mbIn.value=mbDefault;
@@ -700,7 +722,7 @@ function render(){
     const _ab=document.getElementById('alignpx');
     if(_ab)_ab.onclick=()=>{const p=SIG.spine&&SIG.spine.index_close; if(p){_taiex.value=Math.round(p);_taiex.dataset.touched=1;calcCtr();}};
   }
-  $('#navin').oninput=$('#taiex').oninput=calcCtr; calcCtr();
+  $('#navin').oninput=$('#taiex').oninput=calcCtr; $('#myexp').addEventListener('input',calcCtr); calcCtr();
 
   if(!NAV)return;  // signal-first:NAV(89KB)未到 → 先畫好上半部訊號卡(LCP),下半圖表/計算等 NAV 到再補
   /* 2022 案例(由資料現算, 不寫死) */
