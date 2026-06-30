@@ -126,7 +126,8 @@ def test_crosscheck_autocorrects_taiex_and_etf(tmp_path, monkeypatch):
     r = xc.run()
     fixed = pd.read_csv(tmp_path / "taiex_twii.csv", parse_dates=["date"]).set_index("date")
     assert fixed.loc["2026-06-23", "close"] == 99.0           # TAIEX 自動覆寫
-    assert len(r["taiex_corrections"]) == 1
+    assert fixed.loc["2026-06-24", "close"] == 97.0           # point-snap:後續偏離 TWSE 的 level 也修(舊版只修首根=潛在 bug)
+    assert len(r["taiex_corrections"]) == 2                   # 6/23 與 6/24 兩根都偏離 TWSE >1點 → 都 snap
     etf = pd.read_csv(tmp_path / "etf_0050.csv", parse_dates=["date"]).set_index("date")["adj"]
     assert abs(etf.loc["2026-06-23"] - 99.0) < 1e-6           # ETF 含息重建:100×(1-1%)=99
     assert abs(etf.loc["2026-06-24"] - 97.0) < 1e-6           # 連帶 level 位移也校正

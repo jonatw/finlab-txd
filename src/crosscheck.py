@@ -28,6 +28,10 @@ DERIVED = ROOT / "data" / "derived"
 XCHECK = DERIVED / "xcheck.json"
 SETTLE_DAYS = 5
 RET_TOL = 0.004        # 報酬差 >0.4pp 視為不一致(>1 tick 的真實偏離)
+TAIEX_PT_TOL = 1.0     # TAIEX close 偏離 TWSE >1 點即 snap 成 TWSE。指數無除息、TWSE=同一發行量加權
+                       # 指數=唯一真值,無理由容忍 yfinance 任何偏離;且 DTP 邊際關機閘對「數十點」就
+                       # 敏感(實證 2026-06-29 close 50 點過渡幽靈值=0.11%<0.4pp 報酬容差 → 沒被修 →
+                       # 翻掉 7/1 閘)。故 TAIEX 用 point 級 snap,不靠 0.4pp 報酬容差。
 TWSE = "https://www.twse.com.tw"
 ETFS = ("0050", "0056", "00631L")
 
@@ -100,15 +104,20 @@ def run() -> dict:
         sret, tret = tx["close"].pct_change(), tw_tx["close"].reindex(tx.index).pct_change()
         changed = False
         for d in tx.index[-SETTLE_DAYS:]:
-            if d in tw_tx.index and pd.notna(sret.get(d)) and pd.notna(tret.get(d)) \
-                    and abs(sret[d] - tret[d]) > RET_TOL:
+            if d not in tw_tx.index:
+                continue
+            pt_diff = abs(float(tx.loc[d, "close"]) - float(tw_tx.loc[d, "close"]))
+            ret_div = pd.notna(sret.get(d)) and pd.notna(tret.get(d)) and abs(sret[d] - tret[d]) > RET_TOL
+            if pt_diff > TAIEX_PT_TOL:                  # close 偏離 TWSE >1點 → 以 TWSE 權威值覆寫
                 old = float(tx.loc[d, "close"])
                 tx.loc[d, ["open", "high", "low", "close"]] = tw_tx.loc[d, ["open", "high", "low", "close"]].values
-                rep["taiex_corrections"].append(
-                    {"date": str(d.date()), "old_close": round(old, 2),
-                     "new_close": round(float(tw_tx.loc[d, "close"]), 2),
-                     "yahoo_ret_pct": round(sret[d] * 100, 2), "twse_ret_pct": round(tret[d] * 100, 2)})
                 changed = True
+                if ret_div or pt_diff > 5:              # 只記「報酬級 / 顯著(>5點)」偏離,免 tick 噪音灌 audit
+                    rep["taiex_corrections"].append(
+                        {"date": str(d.date()), "old_close": round(old, 2),
+                         "new_close": round(float(tw_tx.loc[d, "close"]), 2), "pt_diff": round(pt_diff, 2),
+                         "yahoo_ret_pct": round(sret[d] * 100, 2) if pd.notna(sret.get(d)) else None,
+                         "twse_ret_pct": round(tret[d] * 100, 2) if pd.notna(tret.get(d)) else None})
         if changed:
             tx.round(2).to_csv(RAW / "taiex_twii.csv")
         # --- ETF:重建含息報酬(TWSE raw + yfinance 配息)→ 不符則自動修正含息 level;配息抓取失敗才 flag ---
