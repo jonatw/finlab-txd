@@ -1,0 +1,2 @@
+# CI/workflow 檔 = 人類 surface：動 .github/ 的 PR 需要 jonatw 本人 review（agent 的 App 沒有 workflow 權限，這裡是第二道鎖）
+/.github/ @jonatw
