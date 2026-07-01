@@ -57,6 +57,7 @@ h1{font:900 26px/1.3 var(--serif);margin:2px 0 0}
 .p-mut{background:rgba(142,153,168,.1);color:var(--sub);border:1px solid var(--hair)}
 #banner{display:none;background:linear-gradient(90deg,#5c150d,#7a1f12);color:#fff;padding:12px 16px;border-radius:10px;font-weight:700;margin:12px 0}
 #retired{display:none;background:#4a0d0d;color:#ffd7d2;padding:12px 16px;border-radius:10px;margin:12px 0}
+#paper{display:none;background:#0d2a4a;color:#b8d4f0;padding:12px 16px;border-radius:10px;margin:12px 0}
 
 /* ── hero: gauge + engines ── */
 .hero{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
@@ -157,6 +158,7 @@ footer b{color:var(--sub)}
 </header>
 <div id="banner"></div>
 <div id="retired">⚠️ 此策略已被標記退役(RETIRED),以下訊號僅供參考,<b>請勿據此操作</b>。</div>
+<div id="paper">📝 紙上追蹤中（PAPER）· 未投入真實資金</div>
 
 <!-- ════ 01 駕駛艙 ════ -->
 <div class="sec"><span class="no">01</span><h2>駕駛艙</h2><span class="ln"></span><span class="sub mono" id="lanepill"></span></div>
@@ -576,6 +578,7 @@ function render(){
   $('#dep').textContent=SIG.status.deploy_date||'—';
   $('#lanepill').textContent=`paper-lane ${SIG.status.lane_health}`;
   if(SIG.status.stage==='RETIRED'){$('#retired').style.display='block';$('#sigcard').style.opacity=.6;}
+  else if(SIG.status.stage==='PAPER'){$('#paper').style.display='block';}
   const lag=Math.round((Date.now()-new Date(SIG.px_as_of))/864e5);
   if(lag>4){$('#banner').style.display='block';$('#banner').textContent=`⚠️ 資料停在 ${SIG.px_as_of}(${lag} 天前),管線可能未更新,勿據此操作`;}
 
