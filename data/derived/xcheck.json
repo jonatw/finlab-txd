@@ -1,10 +1,18 @@
 {
-  "validated": false,
-  "skipped": true,
-  "taiex_corrections": [],
+  "validated": true,
+  "skipped": false,
+  "taiex_corrections": [
+    {
+      "date": "2026-07-01",
+      "old_close": 46875.55,
+      "new_close": 47018.99,
+      "pt_diff": 143.44,
+      "yahoo_ret_pct": 1.63,
+      "twse_ret_pct": 1.94
+    }
+  ],
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
-  "error": "Expecting value: line 1 column 1 (char 0)",
   "mismatch": false
 }
