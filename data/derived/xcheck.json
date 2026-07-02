@@ -2,22 +2,7 @@
   "validated": true,
   "skipped": false,
   "taiex_corrections": [],
-  "etf_corrections": [
-    {
-      "etf": "0050",
-      "from": "2026-07-02",
-      "n_bars": 1,
-      "old_last_close": 8.5357,
-      "new_last_close": 856.2271
-    },
-    {
-      "etf": "0056",
-      "from": "2026-07-02",
-      "n_bars": 1,
-      "old_last_close": 1.5569,
-      "new_last_close": 155.1628
-    }
-  ],
+  "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
   "mismatch": false
