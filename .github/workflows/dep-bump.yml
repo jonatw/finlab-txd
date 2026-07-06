@@ -1,5 +1,5 @@
 name: dep-bump
-# 每週把所有套件升到最新 → 跑「實況管線(真抓 Yahoo)+ 全測試」閘門 → 綠燈才改 pin 並自動 commit。
+# 每週把所有套件升到最新 → 跑「實況管線(真抓 Yahoo)+ 全測試」閘門 → 綠燈才改 pin 並開 PR。
 # 防範本次事件:pinned 套件(如 yfinance)被上游 API 淘汰、訊號靜默斷掉。
 # 安全網 = 既有 golden 錨點 / seam / look-ahead / data-sanity 測試:任何資料漂移或時序破壞都會擋下 bump。
 on:
@@ -32,12 +32,14 @@ jobs:
       - name: show candidate requirements.txt
         run: git --no-pager diff requirements.txt || true
       - name: gate — 實況抓取必須成功 + 完整管線 + 全測試
+        id: gate
         run: |
           # 直接驗新版能否與 Yahoo 對話(本次失敗模式只有 live fetch 抓得到)
           python -c "from src.fetch import _yf; _yf('^TWII', False, period='5d'); print('live fetch OK')"
           python -m src.pipeline
           python -m pytest -q
-      - name: gate 綠 → minor/patch 自動 commit;major 走 PR
+      - name: gate 綠 → minor/patch 與 major 均走 PR（不直推 main）
+        id: publish
         if: success()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -47,22 +49,28 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ "${{ steps.bump.outputs.has_major }}" = "true" ]; then
-            branch="dep-bump/$(date -u +%Y%m%d-%H%M)"
-            git checkout -b "$branch"
-            git add requirements.txt
-            git commit -m "chore: dep-bump(含 major,待 review)$(date -u +%F)"
-            git push origin "$branch"
-            gh pr create --base main --head "$branch" \
-              --title "dep-bump(含 major 版號)$(date -u +%F)" \
-              --body "自動升級,gate(實況抓取+完整管線+24測試+golden 錨點)全綠。依政策含 major 版號 → 走 PR 等人 review。變動:${{ steps.bump.outputs.changes }}。golden/seam/look-ahead 已 bit-identical 把關,merge 前掃一眼 breaking change 即可。" \
-              || echo "PR 建立失敗(非致命)"
+            branch="dep-bump/major-$(date -u +%Y%m%d-%H%M)"
+            commit_msg="chore: dep-bump(含 major,待 review)$(date -u +%F)"
+            pr_title="dep-bump(含 major 版號)$(date -u +%F)"
+            pr_body="自動升級,gate(實況抓取+完整管線+24測試+golden 錨點)全綠。依政策含 major 版號 → 走 PR 等人 review。變動:${{ steps.bump.outputs.changes }}。golden/seam/look-ahead 已 bit-identical 把關,merge 前掃一眼 breaking change 即可。"
           else
-            git add requirements.txt
-            git commit -m "chore: auto dep-bump(minor/patch,gate 綠)$(date -u +%F)"
-            git push
+            branch="dep-bump/minor-$(date -u +%Y%m%d-%H%M)"
+            commit_msg="chore: dep-bump(minor/patch,gate 綠)$(date -u +%F)"
+            pr_title="dep-bump(minor/patch)$(date -u +%F)"
+            pr_body="自動升級,gate(實況抓取+完整管線+24測試+golden 錨點)全綠。僅 minor/patch 版號,無 breaking change 風險。變動:${{ steps.bump.outputs.changes }}。"
           fi
-      - name: open issue if gate failed（維持現有 pin 不動)
-        if: failure()
+          git checkout -b "$branch"
+          git add requirements.txt
+          git commit -m "$commit_msg"
+          git push origin "$branch"
+          pr_url=$(gh pr create --base main --head "$branch" \
+            --title "$pr_title" \
+            --body "$pr_body") || echo "PR 建立失敗(非致命)"
+          if [ -n "$pr_url" ] && [ "${{ steps.bump.outputs.has_major }}" != "true" ]; then
+            gh pr merge "$pr_url" --auto --squash || echo "auto-merge 設定失敗(repo 可能未開 allow_auto_merge,非致命)"
+          fi
+      - name: gate 失敗 → open issue（維持現有 pin 不動）
+        if: always() && steps.gate.outcome == 'failure'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -70,4 +78,13 @@ jobs:
           gh issue create \
             --title "dep-bump gate 失敗 $(date -u +%F)" \
             --body "自動升級套件後『實況管線+測試』未過 → **維持現有 pin 未改**。可能是某套件 breaking change、或資料源/數字漂移觸發 golden/seam 測試。請手動檢查。Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            || echo "issue create 失敗(非致命)"
+      - name: gate 綠但 PR/push 步驟失敗 → open issue（pin 未落地，非 gate 問題）
+        if: always() && steps.gate.outcome == 'success' && steps.publish.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "dep-bump PR/push 步驟失敗 $(date -u +%F)" \
+            --body "gate 全綠（實況抓取+管線+測試均通過），但建立 branch 或 PR 時失敗 → **requirements.txt pin 未落地**，main 不受影響。請檢查 workflow 權限或 branch 衝突。Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             || echo "issue create 失敗(非致命)"
