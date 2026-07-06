@@ -1,18 +1,10 @@
 {
-  "validated": true,
-  "skipped": false,
-  "taiex_corrections": [
-    {
-      "date": "2026-07-06",
-      "old_close": 46665.56,
-      "new_close": 46556.39,
-      "pt_diff": 109.17,
-      "yahoo_ret_pct": -0.25,
-      "twse_ret_pct": -0.48
-    }
-  ],
+  "validated": false,
+  "skipped": true,
+  "taiex_corrections": [],
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
+  "error": "TWSE /indicesReport/MI_5MINS_HIST stat=查詢日期大於今日，請重新查詢!",
   "mismatch": false
 }
