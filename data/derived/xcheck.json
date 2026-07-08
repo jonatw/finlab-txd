@@ -1,6 +1,6 @@
 {
-  "validated": true,
-  "skipped": false,
+  "validated": false,
+  "skipped": true,
   "taiex_corrections": [
     {
       "date": "2026-07-08",
@@ -14,5 +14,6 @@
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
+  "error": "TWSE /exchangeReport/STOCK_DAY stat=查詢日期大於今日，請重新查詢!",
   "mismatch": false
 }
