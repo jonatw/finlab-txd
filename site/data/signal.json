@@ -1,21 +1,21 @@
 {
-  "px_as_of": "2026-07-08",
+  "px_as_of": "2026-07-09",
   "move_as_of": "2026-07-08",
-  "for_session": "2026-07-09",
-  "for_session_weekday": "週四",
+  "for_session": "2026-07-10",
+  "for_session_weekday": "週五",
   "for_session_approx": false,
   "target_exposure": 2.0,
-  "prev_exposure": 0.0,
-  "changed": true,
-  "action": "加碼",
+  "prev_exposure": 2.0,
+  "changed": false,
+  "action": "不需調倉",
   "pos_text": "台指期 2x 做多",
   "spine": {
     "value": 1.0,
-    "index_close": 45734.41,
+    "index_close": 45354.61,
     "ma": {
-      "60": 42727.09,
-      "120": 37759.5,
-      "200": 33571.24
+      "60": 42878.07,
+      "120": 37882.65,
+      "200": 33675.28
     },
     "above_ma": [
       60,
@@ -26,13 +26,13 @@
   },
   "move": {
     "value": 72.4,
-    "median252": 74.4,
+    "median252": 74.3,
     "regime": "低波加碼",
     "mult": 2
   },
   "dtp": {
-    "percentile": 91.2,
-    "atr_pct": 2.54,
+    "percentile": 88.8,
+    "atr_pct": 2.49,
     "threshold_pct": 4,
     "gated_next": false,
     "regime": "偏高波動",
@@ -45,12 +45,12 @@
     "note": "TXD paper-lane 起算 2026-06-17(紙上追蹤,非實單對帳)。已過 look-ahead + overfit 兩道稽核;live 期望 Sharpe ~1.35"
   },
   "freshness": {
-    "px_index": "2026-07-08",
+    "px_index": "2026-07-09",
     "move": "2026-07-08",
     "curve_stale": false,
-    "market_latest": "2026-07-08",
-    "move_lag_bdays": 0,
-    "expected_last_session": "2026-07-08",
+    "market_latest": "2026-07-09",
+    "move_lag_bdays": 1,
+    "expected_last_session": "2026-07-09",
     "data_lag_sessions": 0,
     "data_stale": false,
     "expected_us_session": "2026-07-08",
@@ -58,23 +58,14 @@
     "move_stale": false,
     "stale_warn": false,
     "xcheck": {
-      "validated": false,
-      "skipped": true,
+      "validated": true,
+      "skipped": false,
       "mismatch": false,
-      "taiex_corrections": [
-        {
-          "date": "2026-07-08",
-          "old_close": 45608.78,
-          "new_close": 45734.41,
-          "pt_diff": 125.63,
-          "yahoo_ret_pct": 0.29,
-          "twse_ret_pct": 0.56
-        }
-      ],
+      "taiex_corrections": [],
       "etf_corrections": [],
       "etf_flags": []
     },
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做; xcheck = TWSE 官方多源驗證(TAIEX 不符自動修正、ETF 不符 flag);xcheck.mismatch=true → ETF 對照線疑壞,人工 review"
   },
-  "generated_at": "2026-07-09T06:31:27+08:00"
+  "generated_at": "2026-07-09T18:05:52+08:00"
 }
