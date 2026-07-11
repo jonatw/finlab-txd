@@ -20,11 +20,14 @@ TWSE_CLOSE = dtime(13, 30)  # 台股現貨收盤
 
 
 def _next_trading_session(ref):
-    """ref 之後第一個 TWSE 真實交易日(認台股假期,如端午/中秋/農曆年);失敗 fallback BDay(1)。
-    回 (Timestamp, 週幾, 是否精確)。避免把假期當下單日(降信度)。"""
+    """ref 之後第一個 TWSE 真實交易日(認台股假期及 override 休市);失敗 fallback BDay(1)。
+    回 (Timestamp, 週幾, 是否精確)。避免把假期/颱風休市當下單日(降信度)。"""
     try:
+        closures = _load_xtai_closures()
         s = xcals.get_calendar("XTAI").sessions_in_range(
             ref + pd.Timedelta(days=1), ref + pd.Timedelta(days=30))
+        if closures:
+            s = pd.DatetimeIndex([x for x in s if pd.Timestamp(x).normalize() not in closures])
         if len(s):
             d = pd.Timestamp(s[0])
             return d, _WEEKDAY_TW[d.weekday()], True
@@ -34,13 +37,17 @@ def _next_trading_session(ref):
     return d, _WEEKDAY_TW[d.weekday()], False
 
 
-def _last_completed_session(now_tw):
-    """以 13:30 TWT 收盤為界,當下『收盤已過』的最近 TWSE 交易日(認假期)。
-    fetch 失敗時 raw 不前進,靠這個對掛鐘比對才抓得到『訊號過期』(curve_stale 看不到)。"""
+def _last_completed_session(now_tw, _use_closures=True):
+    """以 13:30 TWT 收盤為界,當下『收盤已過』的最近 TWSE 交易日(認假期及 override 休市)。
+    fetch 失敗時 raw 不前進,靠這個對掛鐘比對才抓得到『訊號過期』(curve_stale 看不到)。
+    _use_closures=False: 不套用 override(僅用於 suspected_closure 觀測，不影響 stale gate)。"""
     try:
+        closures = _load_xtai_closures() if _use_closures else frozenset()
         cal = xcals.get_calendar("XTAI")
         today = pd.Timestamp(now_tw.date())
         sess = cal.sessions_in_range(today - pd.Timedelta(days=20), today)
+        if closures:
+            sess = pd.DatetimeIndex([s for s in sess if pd.Timestamp(s).normalize() not in closures])
         if len(sess) == 0:
             return None
         last = pd.Timestamp(sess[-1])
@@ -97,12 +104,16 @@ def _signal_ref(cv_index, now_tw):
 
 
 def _data_lag_sessions(ref, expected):
-    """ref(最後資料日)落後 expected(應有的最近收盤日)幾個 TWSE 交易日;0 = 不落後。"""
+    """ref(最後資料日)落後 expected(應有的最近收盤日)幾個 TWSE 交易日(扣除 override 休市);0 = 不落後。"""
     if expected is None or expected <= ref:
         return 0
     try:
+        closures = _load_xtai_closures()
         cal = xcals.get_calendar("XTAI")
-        return int(len(cal.sessions_in_range(ref + pd.Timedelta(days=1), expected)))
+        sessions = cal.sessions_in_range(ref + pd.Timedelta(days=1), expected)
+        if closures:
+            sessions = pd.DatetimeIndex([s for s in sessions if pd.Timestamp(s).normalize() not in closures])
+        return int(len(sessions))
     except Exception:
         return int(max(np.busday_count(ref.date(), expected.date()), 0))
 
@@ -111,6 +122,21 @@ ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
 OUT = ROOT / "site" / "data"
 CURVE = ROOT / "data" / "derived" / "curve.csv"
+CLOSURES_FILE = ROOT / "data" / "market_closures.json"
+
+
+def _load_xtai_closures() -> frozenset:
+    """Load XTAI ad-hoc closures from repo-maintained override list (typhoons, ad-hoc suspensions
+    not yet reflected in exchange_calendars' static list)."""
+    try:
+        data = json.loads(CLOSURES_FILE.read_text())
+        return frozenset(
+            pd.Timestamp(c["date"]).normalize()
+            for c in data.get("closures", [])
+            if c.get("market") == "XTAI"
+        )
+    except Exception:
+        return frozenset()
 POS_TXT = {0: "空手 / 平倉", 1: "台指期 1x 做多", 2: "台指期 2x 做多"}
 
 
@@ -178,10 +204,22 @@ def main(now=None, write=True):
                   "mismatch": _xc.get("mismatch", False),
                   "taiex_corrections": _xc.get("taiex_corrections", []),
                   "etf_corrections": _xc.get("etf_corrections", []),
-                  "etf_flags": _xc.get("etf_flags", [])}
+                  "etf_flags": _xc.get("etf_flags", []),
+                  "twse_last_session": _xc.get("twse_last_session")}
     except Exception:
         xcheck = {"validated": None, "skipped": True, "mismatch": False,
-                  "taiex_corrections": [], "etf_corrections": [], "etf_flags": []}
+                  "taiex_corrections": [], "etf_corrections": [], "etf_flags": [],
+                  "twse_last_session": None}
+
+    # B: suspected_closure — 觀測用，不影響 data_stale / stale gate
+    # 條件：data_stale=True（A 未覆蓋此日）且 TWSE 也確認同一日無資料 → 提醒補 market_closures.json
+    expected_session_ecal = _last_completed_session(now_tw, _use_closures=False)
+    suspected_closure = False
+    if data_stale and expected_session_ecal is not None:
+        twse_last_str = xcheck.get("twse_last_session")
+        if twse_last_str and not xcheck.get("skipped", True):
+            if expected_session_ecal > pd.Timestamp(twse_last_str):
+                suspected_closure = True
 
     signal = {
         "px_as_of": str(ref.date()), "move_as_of": str(move_as_of.date()),
@@ -205,6 +243,7 @@ def main(now=None, write=True):
                       "move_lag_bdays": move_lag,
                       "expected_last_session": str(expected_session.date()) if expected_session is not None else None,
                       "data_lag_sessions": data_lag, "data_stale": data_stale,
+                      "suspected_closure": suspected_closure,
                       "expected_us_session": str(expected_us_session.date()) if expected_us_session is not None else None,
                       "move_us_lag_sessions": move_us_lag, "move_stale": move_stale,
                       "stale_warn": bool(move_lag > 1 or curve_stale or data_stale or move_stale),
@@ -212,6 +251,7 @@ def main(now=None, write=True):
                       "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; "
                               "data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日"
                               "(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做; "
+                              "suspected_closure=true 表示 stale 且 TWSE 也無該日資料(疑似臨時休市未補 market_closures.json); "
                               "xcheck = TWSE 官方多源驗證(TAIEX 不符自動修正、ETF 不符 flag);xcheck.mismatch=true → ETF 對照線疑壞,人工 review"},
         "generated_at": now_tw.isoformat(timespec="seconds"),
     }

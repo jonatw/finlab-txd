@@ -192,3 +192,58 @@ def test_settling_bad_bar_does_not_cascade_block_later_legit_bar(tmp_path, monke
     out = pd.read_csv(tmp_path / "taiex_twii.csv", parse_dates=["date"]).set_index("date")
     assert out.loc["2026-06-24", "close"] == 100.0   # legit 6/24 仍被 append(未被 6/23 壞 bar 連鎖擋掉)
     assert out.loc["2026-06-23", "close"] == 150.0   # 壞 re-fetch 被拒 → 保留 stored
+
+
+# === market_closures override: 颱風休市 2026-07-10 regression tests ===
+
+def test_typhoon_07_10_last_completed_session_all_hours():
+    """2026-07-10 颱風休市在 override 清單 → _last_completed_session 全天回 07-09。"""
+    for h in (0, 6, 10, 13, 18, 23):
+        now = datetime.datetime(2026, 7, 10, h, 0, tzinfo=TW)
+        result = _last_completed_session(now)
+        assert result is not None and result.date() == datetime.date(2026, 7, 9), \
+            f"07-10 {h:02d}:00 → expected 07-09, got {result}"
+
+
+def test_typhoon_closure_weekend_07_11_12_returns_07_09():
+    """07-10 颱風休市 → 隔週末(07-11, 07-12)_last_completed_session 仍應回 07-09。"""
+    for day in (11, 12):
+        now = datetime.datetime(2026, 7, day, 18, 0, tzinfo=TW)
+        result = _last_completed_session(now)
+        assert result is not None and result.date() == datetime.date(2026, 7, 9), \
+            f"07-{day} 18:00 → expected 07-09, got {result}"
+
+
+def test_data_lag_sessions_excludes_closure_in_range():
+    """07-10 颱風日在 closures → 計算 lag(07-09 → 07-13) 時不計 07-10，只計 07-13 = 1。"""
+    # 07-10 颱風(override)、07-11/12 週末 → 07-09 到 07-13 之間實際只差 1 個真正交易日(07-13)
+    assert _data_lag_sessions(pd.Timestamp("2026-07-09"), pd.Timestamp("2026-07-13")) == 1
+
+
+def test_true_stale_non_closure_date_still_counted():
+    """非颱風日的真 stale 仍正常計數(closure 邏輯不誤刪正常交易日)。"""
+    # 6/18(四)→ 6/22(一)，途中 6/19 端午、6/20-21 週末 → lag = 1 session(不受 override 影響)
+    assert _data_lag_sessions(pd.Timestamp("2026-06-18"), pd.Timestamp("2026-06-22")) == 1
+
+
+def test_main_typhoon_07_10_data_stale_false():
+    """main() as-of 07-10 18:00 → expected_last_session=07-09, data_stale=False。
+    seed 資料在 07-09 以前時適用(與 seed 日期無關的純日曆邏輯測試用 _last_completed_session 版本)。"""
+    sig = main(now=datetime.datetime(2026, 7, 10, 18, 0, tzinfo=TW), write=False)
+    fr = sig["freshness"]
+    px = pd.Timestamp(fr["px_index"])
+    if px <= pd.Timestamp("2026-07-09"):
+        # seed 在 07-09 以前：07-10 若非 override 會誤報 stale，修後應 False
+        assert fr["expected_last_session"] == "2026-07-09", \
+            f"expected_last_session should be 2026-07-09, got {fr['expected_last_session']}"
+        assert fr["data_stale"] is False, "07-10 颱風休市不應 data_stale=True"
+        assert fr["data_lag_sessions"] == 0
+    assert "suspected_closure" in fr  # 欄位永遠存在
+
+
+def test_main_true_stale_not_suppressed_on_non_closure_day():
+    """非 closure 日期的真 stale 不應被 override 邏輯誤放行 → data_stale 仍 True。"""
+    sig = main(now=datetime.datetime(2026, 6, 22, 18, 0, tzinfo=TW), write=False)
+    fr = sig["freshness"]
+    if pd.Timestamp(fr["px_index"]) < pd.Timestamp("2026-06-22"):
+        assert fr["data_stale"] is True, "真 stale（非颱風日）不應被 closure 邏輯誤放行"

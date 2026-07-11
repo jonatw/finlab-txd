@@ -94,13 +94,14 @@ def etf_distributions(no: str) -> tuple[dict, bool]:
 
 def run() -> dict:
     """跑交叉驗證:自動修正 TAIEX、flag ETF、寫 xcheck.json。回 report dict。"""
-    rep = {"validated": False, "skipped": False,
+    rep = {"validated": False, "skipped": False, "twse_last_session": None,
            "taiex_corrections": [], "etf_corrections": [], "etf_flags": [], "etf_exdiv": []}
     try:
         tx = pd.read_csv(RAW / "taiex_twii.csv", parse_dates=["date"]).set_index("date")
         last = tx.index[-1]
         # --- TAIEX:不一致 → TWSE 權威自動覆寫 ---
         tw_tx = twse_taiex(last)
+        rep["twse_last_session"] = str(tw_tx.index[-1].date()) if len(tw_tx) > 0 else None
         sret, tret = tx["close"].pct_change(), tw_tx["close"].reindex(tx.index).pct_change()
         changed = False
         for d in tx.index[-SETTLE_DAYS:]:
