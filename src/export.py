@@ -17,6 +17,25 @@ import exchange_calendars as xcals
 _WEEKDAY_TW = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"]
 TW = ZoneInfo("Asia/Taipei")
 TWSE_CLOSE = dtime(13, 30)  # 台股現貨收盤
+ROOT = Path(__file__).resolve().parents[1]
+RAW = ROOT / "data" / "raw"
+OUT = ROOT / "site" / "data"
+CURVE = ROOT / "data" / "derived" / "curve.csv"
+CLOSURES_FILE = ROOT / "data" / "market_closures.json"
+
+
+def _load_xtai_closures() -> frozenset:
+    """Load XTAI ad-hoc closures from repo-maintained override list (typhoons, ad-hoc suspensions
+    not yet reflected in exchange_calendars' static list)."""
+    try:
+        data = json.loads(CLOSURES_FILE.read_text())
+        return frozenset(
+            pd.Timestamp(c["date"]).normalize()
+            for c in data.get("closures", [])
+            if c.get("market") == "XTAI"
+        )
+    except Exception:
+        return frozenset()
 
 
 def _next_trading_session(ref):
@@ -118,25 +137,6 @@ def _data_lag_sessions(ref, expected):
         return int(max(np.busday_count(ref.date(), expected.date()), 0))
 
 
-ROOT = Path(__file__).resolve().parents[1]
-RAW = ROOT / "data" / "raw"
-OUT = ROOT / "site" / "data"
-CURVE = ROOT / "data" / "derived" / "curve.csv"
-CLOSURES_FILE = ROOT / "data" / "market_closures.json"
-
-
-def _load_xtai_closures() -> frozenset:
-    """Load XTAI ad-hoc closures from repo-maintained override list (typhoons, ad-hoc suspensions
-    not yet reflected in exchange_calendars' static list)."""
-    try:
-        data = json.loads(CLOSURES_FILE.read_text())
-        return frozenset(
-            pd.Timestamp(c["date"]).normalize()
-            for c in data.get("closures", [])
-            if c.get("market") == "XTAI"
-        )
-    except Exception:
-        return frozenset()
 POS_TXT = {0: "空手 / 平倉", 1: "台指期 1x 做多", 2: "台指期 2x 做多"}
 
 
