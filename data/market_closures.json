@@ -1,0 +1,12 @@
+{
+  "_note": "Repo-maintained ad-hoc market closures absent from exchange_calendars' static typhoon/holiday list. Add entries when TWSE/TAIFEX suspends trading outside the library's known schedule.",
+  "closures": [
+    {
+      "date": "2026-07-10",
+      "market": "XTAI",
+      "reason": "Typhoon Bavi (颱風巴威) — TWSE full-day suspension, postponed to 2026-07-13",
+      "source": "https://money.udn.com/money/story/5607/9618494",
+      "announced": "2026-07-10"
+    }
+  ]
+}
