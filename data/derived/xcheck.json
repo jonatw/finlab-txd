@@ -1,11 +1,10 @@
 {
-  "validated": false,
-  "skipped": true,
-  "twse_last_session": null,
+  "validated": true,
+  "skipped": false,
+  "twse_last_session": "2026-07-13",
   "taiex_corrections": [],
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
-  "error": "Expecting value: line 1 column 1 (char 0)",
   "mismatch": false
 }
