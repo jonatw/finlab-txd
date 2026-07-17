@@ -852,7 +852,7 @@ function drawCharts(r='all',customStart=null){
   if(chN)chN.destroy();if(chE)chE.destroy();
   // 存股對照線: 窗口起點在上市前 → 不畫不硬接(避免「從 1.0 起跑」的假比較)
   const etfDS=[];
-  [['etf_0050','存0050(含息)','#7d96c9'],['etf_0056','存0056(含息)','#6fa98c'],['etf_00631L','正2 00631L(無腦2x)','#b07d7d']].forEach(([k,lab,col])=>{
+  [['etf_0050','存0050(含息)','#7d96c9'],['etf_0056','存0056(含息)','#6fa98c'],['etf_00631L','正2 00631L(無腦2x)','#b07d7d'],['blend_pcr','TXD×P/C 50/50(追蹤)','#c9a0e0']].forEach(([k,lab,col])=>{
     const full=NAV.series[k];if(!full)return;
     const seg=dn(full.slice(s)), e0=seg[0];
     if(e0==null)return;
@@ -949,7 +949,8 @@ function calcPnl(){const cap=+$('#cap').value,st=$('#start').value,{date,nav,ben
     ['只抱加權指數(不含息)',{g:gb,mdd:pathStat(benchmark).mdd},''],
     ['存0050(含息)',pathStat(NAV.series.etf_0050),'','2003-07 上市'],
     ['存0056(含息)',pathStat(NAV.series.etf_0056),'','2007-12 上市'],
-    ['正2 00631L(無腦2x)',pathStat(NAV.series.etf_00631L),'','2014-10 上市']];
+    ['正2 00631L(無腦2x)',pathStat(NAV.series.etf_00631L),'','2014-10 上市'],
+    ['TXD×P/C 50/50(追蹤線)',pathStat(NAV.series.blend_pcr),'','2010-06 P/C資料起']];
   let trs='';
   rows.forEach(([lab,stt,em,since])=>{
     trs+=stt?`<tr${em?' style="color:var(--amber)"':''}><td>${lab}</td><td class="num">${fmt(cap*stt.g)}</td><td class="num">${((stt.g-1)*100).toFixed(0)}%</td><td class="num dn">${(stt.mdd*100).toFixed(0)}%</td></tr>`

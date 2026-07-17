@@ -260,6 +260,27 @@ def main(now=None, write=True):
         s = _series(f"etf_{t}.csv").reindex(cv.index)
         return [round(float(x), 4) if pd.notna(x) else None for x in s]
 
+    def blend_pcr():
+        """TXD×P/C 50/50 追蹤線(#151 研究過雙稽核;純顯示,不動兩腿、不動部署——
+        user 裁決 2026-07-18:TXD lane 照跑,blend 僅當儀表對照)。PCR 起算前為 None 不畫。
+        pcr_curve.csv 缺席(pcr 管線失敗)→ 全 None,絕不擋主 export。"""
+        try:
+            pc_df = pd.read_csv(ROOT / "data" / "derived" / "pcr_curve.csv",
+                                parse_dates=["date"]).set_index("date")
+        except Exception:
+            return [None] * len(cv)
+        # ⚠️ pcr_curve 全時段都有列(P/C 資料前 pnl=0 flat)——不遮罩會讓 1999 段變成
+        # 「一半 TXD 假裝成 blend」。以 P/C ratio 實際存在(2010-01 起)為起算遮罩。
+        has_pc = pc_df["pcr"].notna().reindex(cv.index, fill_value=False)
+        pnl = (0.5 * cv["pnl"] + 0.5 * pc_df["pnl"].reindex(cv.index)).where(has_pc)
+        valid = pnl.notna()
+        if not valid.any():
+            return [None] * len(cv)
+        nav_b = (1.0 + pnl[valid]).cumprod()
+        out_s = pd.Series(np.nan, index=cv.index)
+        out_s[valid] = nav_b
+        return [round(float(x), 4) if pd.notna(x) else None for x in out_s]
+
     nav = {
         "updated": str(ref.date()),
         "haircut_note": "TXD(TX+DTP濾網, Wilder ATR)回測全期 Sharpe 1.40 / MDD -20%; live 合理期望 ~1.35-1.40, 別用回測數字外推",
@@ -274,8 +295,11 @@ def main(now=None, write=True):
             "move_mult": [2 if bool(move.loc[d] < med.loc[d]) else 1 for d in cv.index],
             "dtp_gated": [int(x) for x in cv["dtp_gated"]],
             "etf_0050": etf("0050"), "etf_0056": etf("0056"), "etf_00631L": etf("00631L"),
+            "blend_pcr": blend_pcr(),
         },
         "etf_note": "0050/0056/00631L = 還原含息(持有人真實報酬口徑, 與不含息的加權指數基準不同); 上市前無資料不畫",
+        "blend_note": "TXD×P/C 50/50 = 追蹤線(研究 #151 過雙稽核: Sharpe 1.07/MDD -20, blend≥較差腿為結構性保證); "
+                      "僅對照顯示, 部署仍為 TXD 單獨(user 裁決 2026-07-18), P/C 資料 2010 起",
     }
     if write:
         # 冪等:若除了 generated_at 之外無實質變化,保留舊時戳 → 不產生 diff → 重試窗多班不刷 commit
