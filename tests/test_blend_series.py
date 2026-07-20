@@ -17,9 +17,17 @@ def test_blend_aligned_and_prefix_none(nav):
     s = nav["series"]
     assert "blend_pcr" in s, "nav.json 缺 blend_pcr(export 後才有;先跑 pipeline --no-fetch)"
     assert len(s["blend_pcr"]) == len(s["date"])
-    # PCR 資料 2010 起 → 1999 段必為 None(不畫);尾端必有值
+    # PCR 資料 2010 起 → 1999 段必為 None(不畫)
     assert s["blend_pcr"][0] is None
-    assert s["blend_pcr"][-1] is not None
+    # 尾端允許有界 None：PCR 盤後公布 / 週末最多落後 5 個交易日
+    # （週一 = 最多前一個交易日 Fri 才有值；「最後非 None 值距尾 ≤ 5」守住資料流正常）
+    non_none_idx = [i for i, v in enumerate(s["blend_pcr"]) if v is not None]
+    assert non_none_idx, "blend_pcr 全為 None（pcr 管線可能整條失敗）"
+    tail_gap = len(s["blend_pcr"]) - 1 - non_none_idx[-1]
+    assert tail_gap <= 5, (
+        f"blend_pcr 尾端連續 None 超過 5 個（gap={tail_gap}）"
+        "，PCR 資料落後過多或管線異常"
+    )
 
 
 def test_blend_value_matches_recompute(nav):
