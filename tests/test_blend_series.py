@@ -17,9 +17,17 @@ def test_blend_aligned_and_prefix_none(nav):
     s = nav["series"]
     assert "blend_pcr" in s, "nav.json 缺 blend_pcr(export 後才有;先跑 pipeline --no-fetch)"
     assert len(s["blend_pcr"]) == len(s["date"])
-    # PCR 資料 2010 起 → 1999 段必為 None(不畫);尾端必有值
+    # PCR 資料 2010 起 → 1999 段必為 None(不畫)
     assert s["blend_pcr"][0] is None
-    assert s["blend_pcr"][-1] is not None
+    # 尾端有值：僅在 pcr_curve 確實含最後一個交易日時才斷言。
+    # pcr 是 paper-lane，失敗日 pcr_curve stale → blend_pcr[-1]=None 是正確行為，
+    # 不應把 paper-lane 故障升級成擋 pre-deploy gate。
+    last_date = pd.Timestamp(s["date"][-1])
+    pcr_path = ROOT / "data" / "derived" / "pcr_curve.csv"
+    if pcr_path.exists():
+        pc_df = pd.read_csv(pcr_path, parse_dates=["date"]).set_index("date")
+        if last_date in pc_df.index and pd.notna(pc_df.loc[last_date, "pcr"]):
+            assert s["blend_pcr"][-1] is not None
 
 
 def test_blend_value_matches_recompute(nav):

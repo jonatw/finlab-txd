@@ -1,4 +1,4 @@
-"""每日管線:fetch(Yahoo 增量)→ rebuild → metrics → health → export → feed。finlab-free。
+"""每日管線:fetch(Yahoo 增量)→ rebuild → metrics → health → pcr → export → feed。finlab-free。
     python -m src.pipeline            # 完整跑
     python -m src.pipeline --no-fetch # 只重算(離線/CI 重現)
 """
@@ -25,10 +25,10 @@ def rebuild_curve() -> pd.DataFrame:
 
 def main(do_fetch: bool = True):
     if do_fetch:
-        print("[1/7] fetch (Yahoo incremental)")
+        print("[1/8] fetch (Yahoo incremental)")
         for line in fetch.main():
             print("   ", line)
-        print("[2/7] crosscheck (TWSE 官方多源驗證:TAIEX 自動修正 / ETF flag)")
+        print("[2/8] crosscheck (TWSE 官方多源驗證:TAIEX 自動修正 / ETF flag)")
         xc = crosscheck.run()
         if xc.get("skipped"):
             print(f"    skipped (TWSE 不可達): {str(xc.get('error',''))[:60]} — 不擋管線")
@@ -41,25 +41,26 @@ def main(do_fetch: bool = True):
             for f in xc["etf_flags"]:
                 print(f"      ⚠️ ETF {f['etf']} {f['date']} flag(stored {f['stored_ret_pct']}% vs TWSE raw {f.get('twse_raw_ret_pct')}%,股利抓取失敗)→ 人工 review")
     else:
-        print("[1/7] fetch skipped (--no-fetch)")
-        print("[2/7] crosscheck skipped (--no-fetch;離線重現不打 TWSE)")
-    print("[3/7] rebuild curve")
+        print("[1/8] fetch skipped (--no-fetch)")
+        print("[2/8] crosscheck skipped (--no-fetch;離線重現不打 TWSE)")
+    print("[3/8] rebuild curve")
     cv = rebuild_curve()
     print(f"    curve {len(cv)} 列 → {cv.index[-1].date()}")
-    print("[4/7] metrics")
+    print("[4/8] metrics")
     metrics.main()
-    print("[5/7] health (paper-lane band + DD breaker)")
+    print("[5/8] health (paper-lane band + DD breaker)")
     health.main()
-    print("[6/7] export JSON")
-    export.main()
-    print("[7/7] feed (JSON Feed)")
-    feed.main()
-    # P/C 反向擇時 paper-lane(#133):平行觀察訊號,失敗絕不擋 TXD 主管線
-    print("[+] pcr paper-lane (TAIFEX P/C, 平行訊號)")
+    # P/C 反向擇時 paper-lane(#133):移到 export 之前,讓 export 讀到當班 fresh pcr_curve。
+    # 失敗絕不擋 TXD 主管線;pcr 掛掉時 export 照跑、blend_pcr 全 None。
+    print("[6/8] pcr paper-lane (TAIFEX P/C, 平行訊號)")
     try:
         pcr.main(do_fetch=do_fetch)
     except Exception as e:  # noqa: BLE001
         print(f"    pcr: SKIP {str(e)[:60]} (paper-lane 失敗不擋主線)")
+    print("[7/8] export JSON")
+    export.main()
+    print("[8/8] feed (JSON Feed)")
+    feed.main()
     print("✓ pipeline done")
 
 
