@@ -1,24 +1,24 @@
 {
-  "pcr_as_of": "2026-07-17",
-  "pcr_value": 92.94,
+  "pcr_as_of": "2026-07-20",
+  "pcr_value": 82.72,
   "threshold_p60": 137.09,
-  "trailing_pctile": 3.2,
+  "trailing_pctile": 1.2,
   "signal_next": false,
   "pos_text": "空手(P/C 偏低=自滿→避崩盤)",
   "regime": "自滿/樂觀區(避開)",
   "rule": "P/C > 自身 trailing-252 p60 → 隔日做多;否則空手(T+1, 2bps)",
   "backtest": {
-    "span": "2010-01-04~2026-07-17",
+    "span": "2010-01-04~2026-07-20",
     "sharpe": 1.05,
     "mdd_pct": -24.6,
     "note": "全期回測參考值;非 live 保證。研究 gauntlet:躲 5-6 危機、PBO benign、與 TXD corr 0.61"
   },
   "paper_lane": {
     "deploy_date": "2026-06-22",
-    "days": 19,
+    "days": 20,
     "nav": 0.98,
-    "benchmark": 0.9183,
+    "benchmark": 0.9136,
     "note": "P/C 反向擇時平行 paper-lane(#133)。不混入 TXD 部署曲線;養 track record 後再決定 standalone vs 與 TXD blend(研究實測 blend 更好)"
   },
-  "generated_at": "2026-07-17T16:37:33+08:00"
+  "generated_at": "2026-07-20T18:23:50+08:00"
 }
