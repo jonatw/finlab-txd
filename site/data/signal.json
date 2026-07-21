@@ -72,26 +72,11 @@
           "twse_ret_pct": 4.2
         }
       ],
-      "etf_corrections": [
-        {
-          "etf": "0050",
-          "from": "2026-07-21",
-          "n_bars": 1,
-          "old_last_close": 806.6477,
-          "new_last_close": 811.3696
-        },
-        {
-          "etf": "0056",
-          "from": "2026-07-21",
-          "n_bars": 1,
-          "old_last_close": 146.1658,
-          "new_last_close": 150.1482
-        }
-      ],
+      "etf_corrections": [],
       "etf_flags": [],
       "twse_last_session": "2026-07-21"
     },
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做; suspected_closure=true 表示 stale 且 TWSE 也無該日資料(疑似臨時休市未補 market_closures.json); xcheck = TWSE 官方多源驗證(TAIEX 不符自動修正、ETF 不符 flag);xcheck.mismatch=true → ETF 對照線疑壞,人工 review"
   },
-  "generated_at": "2026-07-22T06:05:51+08:00"
+  "generated_at": "2026-07-22T06:25:55+08:00"
 }

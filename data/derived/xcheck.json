@@ -12,22 +12,7 @@
       "twse_ret_pct": 4.2
     }
   ],
-  "etf_corrections": [
-    {
-      "etf": "0050",
-      "from": "2026-07-21",
-      "n_bars": 1,
-      "old_last_close": 806.6477,
-      "new_last_close": 811.3696
-    },
-    {
-      "etf": "0056",
-      "from": "2026-07-21",
-      "n_bars": 1,
-      "old_last_close": 146.1658,
-      "new_last_close": 150.1482
-    }
-  ],
+  "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [
     {
