@@ -6,6 +6,18 @@
  "description": "Daily target-exposure signal for the TXD timing strategy. Research only, not advice.",
  "items": [
   {
+   "id": "2026-07-27",
+   "url": "https://txd.av8r.tw/#2026-07-27",
+   "title": "2026-07-27 — 🚨 高波動關機 / 空手(不需調倉)",
+   "content_text": "target_exposure=0.0 (prev 0.0, changed=false). spine=0.67 (站上 2/3 均線). MOVE=80.1 vs median252 74.0 → 1x. DTP pct 98.4 (高波動關機). 研究用,非投資建議。",
+   "date_published": "2026-07-27T13:30:00+08:00",
+   "_txd": {
+    "target_exposure": 0.0,
+    "changed": false,
+    "gated_next": true
+   }
+  },
+  {
    "id": "2026-07-24",
    "url": "https://txd.av8r.tw/#2026-07-24",
    "title": "2026-07-24 — 🚨 高波動關機 / 空手(不需調倉)",
