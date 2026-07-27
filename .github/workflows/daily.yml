@@ -17,7 +17,7 @@ on:
     - cron: "30 9 * * 1-5"    # 17:30 TWT — 末班;仍 stale 則告警 + job 標紅
   workflow_dispatch:
 permissions:
-  contents: read   # push 走 deploy key(SSH),GITHUB_TOKEN 已無寫入需求
+  contents: read   # push 走 maneki App token,GITHUB_TOKEN 無寫入需求
 concurrency:
   group: daily
   cancel-in-progress: false
@@ -25,13 +25,19 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      # main 有 ruleset 保護(require PR)。GitHub App(Integration 類型)bypass 對
-      # pull_request 規則有 GitHub 平台限制——即使正確列在 bypass_actors(mode always/exempt
-      # 都試過)仍會被 GH013/GH006 擋下,實測驗證見 #11。改用 deploy key(DeployKey 類型 bypass
-      # 已實測可行,見 ruleset bypass_actors 新增項)。
+      # main 由 ruleset 保護(require PR)。maneki 在 bypass_actors 用 exempt 模式——
+      # 2026-07 GitHub 收緊 always 語意後,非互動 git push 只認 exempt(#11/#14 實測)。
+      # ⚠️ classic branch protection 不可再對本 repo 加 PR-review 要求:personal repo
+      # 無 App 豁免機制(bypass_pull_request_allowances 為 org 限定),加了就會再次
+      # 擋掉本 workflow(#14 兩層互遮掩事故)。政策(reviews≥1+dismiss_stale)由 ruleset 承載。
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.MANEKI_APP_ID }}
+          private-key: ${{ secrets.MANEKI_PRIVATE_KEY }}
       - uses: actions/checkout@v5
         with:
-          ssh-key: ${{ secrets.DAILY_DEPLOY_KEY }}
+          token: ${{ steps.app-token.outputs.token }}
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -42,8 +48,8 @@ jobs:
         run: python -m pytest -q
       - name: commit & push (Cloudflare Pages auto-deploys on push)
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "jonatw-maneki[bot]"
+          git config user.email "298893258+jonatw-maneki[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --quiet || git commit -m "daily $(date -u +%Y-%m-%d)"
           git push
