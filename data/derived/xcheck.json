@@ -1,30 +1,10 @@
 {
   "validated": true,
   "skipped": false,
-  "twse_last_session": "2026-07-27",
-  "taiex_corrections": [
-    {
-      "date": "2026-07-27",
-      "old_close": 43686.15,
-      "new_close": 43634.19,
-      "pt_diff": 51.96,
-      "yahoo_ret_pct": 0.07,
-      "twse_ret_pct": -0.05
-    }
-  ],
+  "twse_last_session": "2026-07-28",
+  "taiex_corrections": [],
   "etf_corrections": [],
   "etf_flags": [],
-  "etf_exdiv": [
-    {
-      "etf": "0050",
-      "date": "2026-07-21",
-      "div": 0.6
-    },
-    {
-      "etf": "0056",
-      "date": "2026-07-21",
-      "div": 1.35
-    }
-  ],
+  "etf_exdiv": [],
   "mismatch": false
 }
