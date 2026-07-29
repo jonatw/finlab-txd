@@ -2,7 +2,24 @@
   "validated": true,
   "skipped": false,
   "twse_last_session": "2026-07-29",
-  "taiex_corrections": [],
+  "taiex_corrections": [
+    {
+      "date": "2026-07-24",
+      "old_close": 43748.76,
+      "new_close": 43654.84,
+      "pt_diff": 93.92,
+      "yahoo_ret_pct": -2.46,
+      "twse_ret_pct": -2.67
+    },
+    {
+      "date": "2026-07-28",
+      "old_close": 41635.37,
+      "new_close": 41603.36,
+      "pt_diff": 32.01,
+      "yahoo_ret_pct": -4.58,
+      "twse_ret_pct": -4.65
+    }
+  ],
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
