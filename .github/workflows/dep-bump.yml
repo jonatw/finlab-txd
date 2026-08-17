@@ -23,10 +23,12 @@ jobs:
           python-version: "3.12"
       - name: upgrade all top-level deps to latest
         run: |
-          # 先砍註解、再砍版本指定符 —— 順序不能反(#21)。反過來的話「# 說明文字」會在
-          # 第一個空白處被切成單獨一個 '#',而 $names 未加引號展開時 '#' 不會被 shell 當
-          # 註解字元,會原封不動送進 pip install 變成 invalid requirement,整條 workflow
-          # 死在這一步(遠早於 gate)。空行過濾順便容忍純空白行。
+          # 多砍一刀 '#'(#21)。沒有這刀,「# 說明文字」會被下一個 sed 在第一個空白處
+          # 切成單獨一個 '#',grep -v '^$' 濾不掉它,而 $names 未加引號展開時 '#' 不會
+          # 被 shell 當註解字元 ⇒ 原封不動送進 pip install 變成 invalid requirement,
+          # 整條 workflow 死在這一步(遠早於 gate)。
+          # 兩個 sed 的先後可交換(PR #24 review 實測逐字相同),先砍註解只是比較好讀。
+          # 空行過濾順便容忍純空白行。
           names=$(sed -E 's/#.*//; s/[=<>!~;[:space:]].*//' requirements.txt | grep -v '^[[:space:]]*$' | tr '\n' ' ')
           echo "bumping: $names"
           pip install -U $names
@@ -107,5 +109,5 @@ jobs:
         run: |
           gh issue create \
             --title "dep-bump 在 gate 之前就失敗 $(date -u +%F)" \
-            --body "dep-bump 在跑到 gate **之前**就失敗（setup-python / pip install / bump_pins.py 其中之一）→ **gate 沒有執行，requirements.txt pin 未改動，main 不受影響**。此路徑過去不會開 issue（#21），只有 workflow 紅點，可能已靜默停擺一段時間。請看 run log 的第一個紅色 step。Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --body "dep-bump 在跑到 gate **之前**就失敗（checkout / setup-python / pip install / bump_pins.py / show candidate 其中之一）→ **gate 沒有執行，requirements.txt pin 未改動，main 不受影響**。此路徑過去不會開 issue（#21），只有 workflow 紅點，可能已靜默停擺一段時間。請看 run log 的第一個紅色 step。Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             || echo "issue create 失敗(非致命)"
