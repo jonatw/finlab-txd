@@ -48,11 +48,14 @@ def _yf(symbol: str, auto_adjust: bool, period: str = "1y", tries: int = 4) -> p
     import yfinance as yf
     # 下面用的 repair=True 走 yfinance 的 [repair] extra:需要 scipy,**1.6.0 起再加 scikit-learn**。
     # requirements.txt 直接 pin 這兩個 —— 本 repo 沒有任何 .py import 它們,別當成廢相依刪掉
-    # (那份檔也放不了註解行:dep-bump.yml 抽套件名的 sed 會把 `#` 當套件名,見 issue 21)。
+    # (那份檔裡有一段對應說明。它曾經放不了註解行 —— dep-bump.yml 抽套件名的 sed 會把
+    #  `#` 當成套件名 —— 那個 bug 已由 issue 21 / PR #24 修掉,現在放得了。)
     # 為什麼要在這裡明確 import:缺套件時 yfinance 會把 ModuleNotFoundError **吞掉**,印成
     # "1 Failed download" 並回空 DataFrame → 走進下面的 "empty result" 分支,失敗長得像「Yahoo 擋下」。
     # issue 19 就是這樣被誤導的。明確 import 讓它當場精準炸開:實測缺 sklearn 時,
     # 有這兩行 = 1.0s 拋 ModuleNotFoundError;沒有 = 空轉 4 輪 backoff 共 20s 才丟假的 Yahoo 錯誤。
+    # 這兩行由 tests/test_fetch_repair_deps.py(#23)守著:它斷言缺相依時在進入下面的
+    # 重試迴圈【之前】就炸開(yf.download 一次都沒被呼叫)。刪掉它們那支測試會紅。
     import scipy  # noqa: F401
     import sklearn  # noqa: F401
     last = None
