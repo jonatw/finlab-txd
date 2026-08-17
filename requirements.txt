@@ -1,6 +1,9 @@
 pandas==3.0.5
 numpy==2.5.2
 yfinance==1.6.0
+# scipy / scikit-learn 不是本專案直接 import 的:它們是 yfinance 的 repair=True
+# 所需(見 src/fetch.py 的 _yf)。缺了會讓抓取失敗被誤報成 Yahoo 故障 —— 那正是 #19
+# 當初難查的原因,#20 修的就是這個。刪除前先看 tests/test_fetch_repair_deps.py。
 scipy==1.18.0
 scikit-learn==1.9.0
 pytest==9.1.1

@@ -23,7 +23,11 @@ jobs:
           python-version: "3.12"
       - name: upgrade all top-level deps to latest
         run: |
-          names=$(sed -E 's/[=<>!~;[:space:]].*//' requirements.txt | grep -v '^$' | tr '\n' ' ')
+          # 先砍註解、再砍版本指定符 —— 順序不能反(#21)。反過來的話「# 說明文字」會在
+          # 第一個空白處被切成單獨一個 '#',而 $names 未加引號展開時 '#' 不會被 shell 當
+          # 註解字元,會原封不動送進 pip install 變成 invalid requirement,整條 workflow
+          # 死在這一步(遠早於 gate)。空行過濾順便容忍純空白行。
+          names=$(sed -E 's/#.*//; s/[=<>!~;[:space:]].*//' requirements.txt | grep -v '^[[:space:]]*$' | tr '\n' ' ')
           echo "bumping: $names"
           pip install -U $names
       - name: rewrite pins + classify major vs minor/patch
@@ -87,4 +91,21 @@ jobs:
           gh issue create \
             --title "dep-bump PR/push 步驟失敗 $(date -u +%F)" \
             --body "gate 全綠（實況抓取+管線+測試均通過），但建立 branch 或 PR 時失敗 → **requirements.txt pin 未落地**，main 不受影響。請檢查 workflow 權限或 branch 衝突。Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            || echo "issue create 失敗(非致命)"
+      - name: gate 之前的步驟失敗 → open issue（靜默停擺兜底）
+        # 上面兩個 handler 只認得「gate 自己失敗」與「gate 綠但 publish 失敗」。任何在
+        # gate **之前**掛掉的 step(setup-python / pip install / bump_pins.py)都讓 gate
+        # 根本沒跑到 ⇒ 兩個條件都不成立 ⇒ 只有 workflow 紅點、一則 issue 都不會開。
+        # 週一排程可以就這樣靜默停擺好幾週,而「相依自動升級」的價值恰恰在無人看顧時仍
+        # 在運作,所以「壞掉時不出聲」是這支 workflow 最不該有的失效模式(#21)。
+        #
+        # 用 != 'failure' 而不是 == 'skipped':「step 從沒跑到」時 outcome 是空字串還是
+        # 'skipped' 未經實證,!= 兩種情況都涵蓋,且不會與上面兩個 handler 重複觸發。
+        if: failure() && steps.gate.outcome != 'failure' && steps.publish.outcome != 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "dep-bump 在 gate 之前就失敗 $(date -u +%F)" \
+            --body "dep-bump 在跑到 gate **之前**就失敗（setup-python / pip install / bump_pins.py 其中之一）→ **gate 沒有執行，requirements.txt pin 未改動，main 不受影響**。此路徑過去不會開 issue（#21），只有 workflow 紅點，可能已靜默停擺一段時間。請看 run log 的第一個紅色 step。Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             || echo "issue create 失敗(非致命)"
