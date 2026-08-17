@@ -46,6 +46,15 @@ def _yf(symbol: str, auto_adjust: bool, period: str = "1y", tries: int = 4) -> p
     最終仍失敗 → raise,交給上層 main() 的 try/except『keep existing + warning』。"""
     import time
     import yfinance as yf
+    # 下面用的 repair=True 走 yfinance 的 [repair] extra:需要 scipy,**1.6.0 起再加 scikit-learn**。
+    # requirements.txt 直接 pin 這兩個 —— 本 repo 沒有任何 .py import 它們,別當成廢相依刪掉
+    # (那份檔也放不了註解行:dep-bump.yml 抽套件名的 sed 會把 `#` 當套件名,見 issue 21)。
+    # 為什麼要在這裡明確 import:缺套件時 yfinance 會把 ModuleNotFoundError **吞掉**,印成
+    # "1 Failed download" 並回空 DataFrame → 走進下面的 "empty result" 分支,失敗長得像「Yahoo 擋下」。
+    # issue 19 就是這樣被誤導的。明確 import 讓它當場精準炸開:實測缺 sklearn 時,
+    # 有這兩行 = 1.0s 拋 ModuleNotFoundError;沒有 = 空轉 4 輪 backoff 共 20s 才丟假的 Yahoo 錯誤。
+    import scipy  # noqa: F401
+    import sklearn  # noqa: F401
     last = None
     for i in range(tries):
         try:
@@ -54,12 +63,6 @@ def _yf(symbol: str, auto_adjust: bool, period: str = "1y", tries: int = 4) -> p
             # 早上抓不到、下午才補上就是這個 cache 過期。repair=True 觸發 yfinance 完整重抓+修復,
             # 補回被 cache 漏掉的最新交易日(回 tz-naive index,行為與原本一致)。
             # append-only 設計保護:repair 即使改寫舊 bar,我們也只取 index > last 的新列。
-            # ⚠️ repair=True 有相依代價:它是 yfinance 的 [repair] extra,需要 scipy,
-            # **yfinance 1.6.0 起再加 scikit-learn**。requirements.txt 直接 pin 這兩個套件
-            # (本 repo 沒有任何 .py import 它們,別當成沒用的相依刪掉;那份檔也放不了註解行——
-            # dep-bump.yml 取套件名的 sed 會把 `#` 當成套件名 → pip 直接 error)。
-            # 缺 sklearn 時 yfinance 會把 ModuleNotFoundError **吞掉**、印成 "1 Failed download"
-            # 並回空 DataFrame → 走到下面的 "empty result" 分支,看起來像 Yahoo 擋下,其實是缺套件。
             df = yf.download(symbol, period=period, progress=False, auto_adjust=auto_adjust, repair=True)
             if not df.empty:
                 if df.columns.nlevels > 1:
