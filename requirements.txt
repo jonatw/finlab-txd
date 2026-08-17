@@ -1,10 +1,6 @@
 pandas==3.0.5
 numpy==2.5.2
 yfinance==1.6.0
-# scipy / scikit-learn 不是本 repo 直接 import(28 個 .py 全掃過,零引用),而是 yfinance[repair] 的相依:
-# src/fetch.py 的 _yf() 固定用 repair=True(防 Yahoo bulk endpoint 靜默回舊 bar,見該處註解)。
-# yfinance 1.6.0 起 repair 路徑改用 sklearn;缺它時 yfinance 會把 ModuleNotFoundError 吞成
-# "Failed download" → 回空 DataFrame → 被上層誤判成「Yahoo 擋下/壞掉」(issue 19)。
 scipy==1.18.0
 scikit-learn==1.9.0
 pytest==9.1.1
