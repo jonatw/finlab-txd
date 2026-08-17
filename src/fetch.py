@@ -48,8 +48,7 @@ def _yf(symbol: str, auto_adjust: bool, period: str = "1y", tries: int = 4) -> p
     import yfinance as yf
     # 下面用的 repair=True 走 yfinance 的 [repair] extra:需要 scipy,**1.6.0 起再加 scikit-learn**。
     # requirements.txt 直接 pin 這兩個 —— 本 repo 沒有任何 .py import 它們,別當成廢相依刪掉
-    # (那份檔的理由註解已於 #24 補回去:dep-bump.yml 抽套件名的 sed 修好了,整行註解現在放得了;
-    #  行末註解仍會被 bump_pins.py 靜默吃掉 —— 要寫就寫整行。)
+    # (requirements.txt 放得了整行註解;行末註解則會被 bump_pins.py 靜默吃掉 —— 要寫就寫整行。)
     # 為什麼要在這裡明確 import:缺套件時 yfinance 會把 ModuleNotFoundError **吞掉**,印成
     # "1 Failed download" 並回空 DataFrame → 走進下面的 "empty result" 分支,失敗長得像「Yahoo 擋下」。
     # issue 19 就是這樣被誤導的。明確 import 讓它當場精準炸開:實測缺 sklearn 時,
