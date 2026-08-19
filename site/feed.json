@@ -6,6 +6,18 @@
  "description": "Daily target-exposure signal for the TXD timing strategy. Research only, not advice.",
  "items": [
   {
+   "id": "2026-08-20",
+   "url": "https://txd.av8r.tw/#2026-08-20",
+   "title": "2026-08-20 — 台指期 1x 做多(減碼)",
+   "content_text": "target_exposure=0.67 (prev 1.0, changed=true). spine=0.67 (站上 2/3 均線). MOVE=75.0 vs median252 73.4 → 1x. DTP pct 73.2 (未關機). 研究用,非投資建議。",
+   "date_published": "2026-08-20T13:30:00+08:00",
+   "_txd": {
+    "target_exposure": 0.67,
+    "changed": true,
+    "gated_next": false
+   }
+  },
+  {
    "id": "2026-08-19",
    "url": "https://txd.av8r.tw/#2026-08-19",
    "title": "2026-08-19 — 台指期 1x 做多(不需調倉)",
