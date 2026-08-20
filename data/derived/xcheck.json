@@ -1,10 +1,11 @@
 {
-  "validated": true,
-  "skipped": false,
-  "twse_last_session": "2026-08-20",
+  "validated": false,
+  "skipped": true,
+  "twse_last_session": null,
   "taiex_corrections": [],
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
+  "error": "HTTPSConnectionPool(host='www.twse.com.tw', port=443): Read timed out. (read timeout=25)",
   "mismatch": false
 }
