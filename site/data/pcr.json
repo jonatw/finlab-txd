@@ -17,8 +17,8 @@
     "deploy_date": "2026-06-22",
     "days": 45,
     "nav": 0.98,
-    "benchmark": 0.9634,
+    "benchmark": 0.9635,
     "note": "P/C 反向擇時平行 paper-lane(#133)。不混入 TXD 部署曲線;養 track record 後再決定 standalone vs 與 TXD blend(研究實測 blend 更好)"
   },
-  "generated_at": "2026-08-24T15:40:32+08:00"
+  "generated_at": "2026-08-25T05:52:13+08:00"
 }
