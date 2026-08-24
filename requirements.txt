@@ -5,7 +5,7 @@ yfinance==1.6.0
 # 缺了會讓抓取失敗被誤報成 Yahoo 故障 —— 那正是 #19 當初難查的原因。
 # 真正的守衛是 src/fetch.py 的 _yf() 開頭那兩行明確 import(#20 加的);
 # tests/test_fetch_repair_deps.py(#23)守著那兩行不被刪掉。動這裡前兩處都看一下。
-scipy==1.18.0
+scipy==1.18.1
 scikit-learn==1.9.0
 pytest==9.1.1
 jsonschema==4.26.0
