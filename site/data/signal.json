@@ -1,14 +1,14 @@
 {
   "px_as_of": "2026-08-25",
-  "move_as_of": "2026-08-24",
+  "move_as_of": "2026-08-25",
   "for_session": "2026-08-26",
   "for_session_weekday": "週三",
   "for_session_approx": false,
-  "target_exposure": 1.0,
+  "target_exposure": 2.0,
   "prev_exposure": 0.67,
   "changed": true,
   "action": "加碼",
-  "pos_text": "台指期 1x 做多",
+  "pos_text": "台指期 2x 做多",
   "spine": {
     "value": 1.0,
     "index_close": 45169.46,
@@ -25,10 +25,10 @@
     "n_above": 3
   },
   "move": {
-    "value": 74.0,
+    "value": 71.9,
     "median252": 73.3,
-    "regime": "常波",
-    "mult": 1
+    "regime": "低波加碼",
+    "mult": 2
   },
   "dtp": {
     "percentile": 62.8,
@@ -46,10 +46,10 @@
   },
   "freshness": {
     "px_index": "2026-08-25",
-    "move": "2026-08-24",
+    "move": "2026-08-25",
     "curve_stale": false,
     "market_latest": "2026-08-25",
-    "move_lag_bdays": 1,
+    "move_lag_bdays": 0,
     "expected_last_session": "2026-08-25",
     "data_lag_sessions": 0,
     "data_stale": false,
@@ -62,12 +62,21 @@
       "validated": true,
       "skipped": false,
       "mismatch": false,
-      "taiex_corrections": [],
+      "taiex_corrections": [
+        {
+          "date": "2026-08-25",
+          "old_close": 45002.91,
+          "new_close": 45169.46,
+          "pt_diff": 166.55,
+          "yahoo_ret_pct": 0.54,
+          "twse_ret_pct": 0.91
+        }
+      ],
       "etf_corrections": [],
       "etf_flags": [],
       "twse_last_session": "2026-08-25"
     },
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做; suspected_closure=true 表示 stale 且 TWSE 也無該日資料(疑似臨時休市未補 market_closures.json); xcheck = TWSE 官方多源驗證(TAIEX 不符自動修正、ETF 不符 flag);xcheck.mismatch=true → ETF 對照線疑壞,人工 review"
   },
-  "generated_at": "2026-08-25T15:26:57+08:00"
+  "generated_at": "2026-08-26T05:31:22+08:00"
 }
