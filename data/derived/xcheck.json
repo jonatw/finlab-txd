@@ -3,15 +3,7 @@
   "skipped": false,
   "twse_last_session": "2026-08-26",
   "taiex_corrections": [],
-  "etf_corrections": [
-    {
-      "etf": "00631L",
-      "from": "2026-08-26",
-      "n_bars": 1,
-      "old_last_close": 797.5468,
-      "new_last_close": 794.3272
-    }
-  ],
+  "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
   "mismatch": false
