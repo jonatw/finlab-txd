@@ -1,21 +1,21 @@
 {
-  "px_as_of": "2026-08-25",
+  "px_as_of": "2026-08-26",
   "move_as_of": "2026-08-25",
-  "for_session": "2026-08-26",
-  "for_session_weekday": "週三",
+  "for_session": "2026-08-27",
+  "for_session_weekday": "週四",
   "for_session_approx": false,
   "target_exposure": 2.0,
-  "prev_exposure": 0.67,
-  "changed": true,
-  "action": "加碼",
+  "prev_exposure": 2.0,
+  "changed": false,
+  "action": "不需調倉",
   "pos_text": "台指期 2x 做多",
   "spine": {
     "value": 1.0,
-    "index_close": 45169.46,
+    "index_close": 45832.62,
     "ma": {
-      "60": 44877.6,
-      "120": 41070.9,
-      "200": 36516.67
+      "60": 44885.85,
+      "120": 41179.26,
+      "200": 36604.36
     },
     "above_ma": [
       60,
@@ -26,13 +26,13 @@
   },
   "move": {
     "value": 71.9,
-    "median252": 73.3,
+    "median252": 73.2,
     "regime": "低波加碼",
     "mult": 2
   },
   "dtp": {
-    "percentile": 62.8,
-    "atr_pct": 2.17,
+    "percentile": 59.6,
+    "atr_pct": 2.13,
     "threshold_pct": 4,
     "gated_next": false,
     "regime": "正常",
@@ -45,16 +45,16 @@
     "note": "TXD paper-lane 起算 2026-06-17(紙上追蹤,非實單對帳)。已過 look-ahead + overfit 兩道稽核;live 期望 Sharpe ~1.35"
   },
   "freshness": {
-    "px_index": "2026-08-25",
+    "px_index": "2026-08-26",
     "move": "2026-08-25",
     "curve_stale": false,
-    "market_latest": "2026-08-25",
-    "move_lag_bdays": 0,
-    "expected_last_session": "2026-08-25",
+    "market_latest": "2026-08-26",
+    "move_lag_bdays": 1,
+    "expected_last_session": "2026-08-26",
     "data_lag_sessions": 0,
     "data_stale": false,
     "suspected_closure": false,
-    "expected_us_session": "2026-08-24",
+    "expected_us_session": "2026-08-25",
     "move_us_lag_sessions": 0,
     "move_stale": false,
     "stale_warn": false,
@@ -62,21 +62,20 @@
       "validated": true,
       "skipped": false,
       "mismatch": false,
-      "taiex_corrections": [
+      "taiex_corrections": [],
+      "etf_corrections": [
         {
-          "date": "2026-08-25",
-          "old_close": 45002.91,
-          "new_close": 45169.46,
-          "pt_diff": 166.55,
-          "yahoo_ret_pct": 0.54,
-          "twse_ret_pct": 0.91
+          "etf": "00631L",
+          "from": "2026-08-26",
+          "n_bars": 1,
+          "old_last_close": 797.5468,
+          "new_last_close": 794.3272
         }
       ],
-      "etf_corrections": [],
       "etf_flags": [],
-      "twse_last_session": "2026-08-25"
+      "twse_last_session": "2026-08-26"
     },
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做; suspected_closure=true 表示 stale 且 TWSE 也無該日資料(疑似臨時休市未補 market_closures.json); xcheck = TWSE 官方多源驗證(TAIEX 不符自動修正、ETF 不符 flag);xcheck.mismatch=true → ETF 對照線疑壞,人工 review"
   },
-  "generated_at": "2026-08-26T05:31:22+08:00"
+  "generated_at": "2026-08-26T15:28:11+08:00"
 }

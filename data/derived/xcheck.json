@@ -1,18 +1,17 @@
 {
   "validated": true,
   "skipped": false,
-  "twse_last_session": "2026-08-25",
-  "taiex_corrections": [
+  "twse_last_session": "2026-08-26",
+  "taiex_corrections": [],
+  "etf_corrections": [
     {
-      "date": "2026-08-25",
-      "old_close": 45002.91,
-      "new_close": 45169.46,
-      "pt_diff": 166.55,
-      "yahoo_ret_pct": 0.54,
-      "twse_ret_pct": 0.91
+      "etf": "00631L",
+      "from": "2026-08-26",
+      "n_bars": 1,
+      "old_last_close": 797.5468,
+      "new_last_close": 794.3272
     }
   ],
-  "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
   "mismatch": false
