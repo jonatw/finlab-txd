@@ -8,12 +8,12 @@
   {
    "id": "2026-09-01",
    "url": "https://txd.av8r.tw/#2026-09-01",
-   "title": "2026-09-01 — 台指期 2x 做多(不需調倉)",
-   "content_text": "target_exposure=2.0 (prev 2.0, changed=false). spine=1.0 (站上 3/3 均線). MOVE=71.0 vs median252 72.6 → 2x. DTP pct 52.4 (未關機). 研究用,非投資建議。",
+   "title": "2026-09-01 — 台指期 1x 做多(減碼)",
+   "content_text": "target_exposure=1.0 (prev 2.0, changed=true). spine=1.0 (站上 3/3 均線). MOVE=75.3 vs median252 72.7 → 1x. DTP pct 52.4 (未關機). 研究用,非投資建議。",
    "date_published": "2026-09-01T13:30:00+08:00",
    "_txd": {
-    "target_exposure": 2.0,
-    "changed": false,
+    "target_exposure": 1.0,
+    "changed": true,
     "gated_next": false
    }
   },
