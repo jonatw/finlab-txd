@@ -1,27 +1,11 @@
 {
-  "validated": true,
-  "skipped": false,
-  "twse_last_session": "2026-09-01",
-  "taiex_corrections": [
-    {
-      "date": "2026-08-28",
-      "old_close": 46307.67,
-      "new_close": 46331.45,
-      "pt_diff": 23.78,
-      "yahoo_ret_pct": 0.72,
-      "twse_ret_pct": 0.77
-    },
-    {
-      "date": "2026-09-01",
-      "old_close": 46752.93,
-      "new_close": 46948.72,
-      "pt_diff": 195.79,
-      "yahoo_ret_pct": 1.35,
-      "twse_ret_pct": 1.78
-    }
-  ],
+  "validated": false,
+  "skipped": true,
+  "twse_last_session": null,
+  "taiex_corrections": [],
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
+  "error": "HTTPSConnectionPool(host='www.twse.com.tw', port=443): Read timed out. (read timeout=25)",
   "mismatch": false
 }
