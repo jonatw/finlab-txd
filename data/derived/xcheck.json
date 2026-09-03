@@ -4,12 +4,12 @@
   "twse_last_session": "2026-09-03",
   "taiex_corrections": [
     {
-      "date": "2026-08-28",
-      "old_close": 46307.67,
-      "new_close": 46331.45,
-      "pt_diff": 23.78,
-      "yahoo_ret_pct": 0.72,
-      "twse_ret_pct": 0.77
+      "date": "2026-09-03",
+      "old_close": 45888.45,
+      "new_close": 45857.66,
+      "pt_diff": 30.79,
+      "yahoo_ret_pct": -0.6,
+      "twse_ret_pct": -0.67
     }
   ],
   "etf_corrections": [],
