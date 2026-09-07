@@ -2,7 +2,16 @@
   "validated": true,
   "skipped": false,
   "twse_last_session": "2026-09-07",
-  "taiex_corrections": [],
+  "taiex_corrections": [
+    {
+      "date": "2026-09-07",
+      "old_close": 47257.94,
+      "new_close": 47326.27,
+      "pt_diff": 68.33,
+      "yahoo_ret_pct": 1.52,
+      "twse_ret_pct": 1.67
+    }
+  ],
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
