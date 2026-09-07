@@ -1,5 +1,5 @@
 pandas==3.0.5
-numpy==2.5.2
+numpy==2.5.3
 yfinance==1.7.0
 # scipy / scikit-learn 不是本專案直接 import 的:它們是 yfinance 的 repair=True 所需。
 # 缺了會讓抓取失敗被誤報成 Yahoo 故障 —— 那正是 #19 當初難查的原因。
