@@ -1,11 +1,19 @@
 {
-  "validated": false,
-  "skipped": true,
-  "twse_last_session": null,
-  "taiex_corrections": [],
+  "validated": true,
+  "skipped": false,
+  "twse_last_session": "2026-09-22",
+  "taiex_corrections": [
+    {
+      "date": "2026-09-22",
+      "old_close": 47842.31,
+      "new_close": 47800.17,
+      "pt_diff": 42.14,
+      "yahoo_ret_pct": 0.26,
+      "twse_ret_pct": 0.17
+    }
+  ],
   "etf_corrections": [],
   "etf_flags": [],
   "etf_exdiv": [],
-  "error": "Expecting value: line 1 column 1 (char 0)",
   "mismatch": false
 }
