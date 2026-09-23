@@ -6,6 +6,18 @@
  "description": "Daily target-exposure signal for the TXD timing strategy. Research only, not advice.",
  "items": [
   {
+   "id": "2026-09-24",
+   "url": "https://txd.av8r.tw/#2026-09-24",
+   "title": "2026-09-24 — 台指期 1x 做多(不需調倉)",
+   "content_text": "target_exposure=1.0 (prev 1.0, changed=false). spine=1.0 (站上 3/3 均線). MOVE=78.6 vs median252 72.7 → 1x. DTP pct 47.6 (未關機). 研究用,非投資建議。",
+   "date_published": "2026-09-24T13:30:00+08:00",
+   "_txd": {
+    "target_exposure": 1.0,
+    "changed": false,
+    "gated_next": false
+   }
+  },
+  {
    "id": "2026-09-23",
    "url": "https://txd.av8r.tw/#2026-09-23",
    "title": "2026-09-23 — 台指期 1x 做多(不需調倉)",
@@ -710,18 +722,6 @@
    "_txd": {
     "target_exposure": 2.0,
     "changed": false,
-    "gated_next": false
-   }
-  },
-  {
-   "id": "2026-07-02",
-   "url": "https://txd.av8r.tw/#2026-07-02",
-   "title": "2026-07-02 — 台指期 2x 做多(加碼)",
-   "content_text": "target_exposure=2.0 (prev 0.0, changed=true). spine=1.0 (站上 3/3 均線). MOVE=68.6 vs median252 74.9 → 2x. DTP pct 92.4 (未關機). 研究用,非投資建議。",
-   "date_published": "2026-07-02T13:30:00+08:00",
-   "_txd": {
-    "target_exposure": 2.0,
-    "changed": true,
     "gated_next": false
    }
   }
