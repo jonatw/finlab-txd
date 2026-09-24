@@ -13,9 +13,9 @@
     "value": 1.0,
     "index_close": 48024.6,
     "ma": {
-      "60": 45332.38,
-      "120": 43662.63,
-      "200": 38717.69
+      "60": 45333.09,
+      "120": 43662.98,
+      "200": 38717.9
     },
     "above_ma": [
       60,
@@ -31,8 +31,8 @@
     "mult": 1
   },
   "dtp": {
-    "percentile": 45.2,
-    "atr_pct": 1.8,
+    "percentile": 44.8,
+    "atr_pct": 1.79,
     "threshold_pct": 4,
     "gated_next": false,
     "regime": "正常",
@@ -59,24 +59,15 @@
     "move_stale": false,
     "stale_warn": false,
     "xcheck": {
-      "validated": true,
-      "skipped": false,
+      "validated": false,
+      "skipped": true,
       "mismatch": false,
-      "taiex_corrections": [
-        {
-          "date": "2026-09-22",
-          "old_close": 47842.31,
-          "new_close": 47800.17,
-          "pt_diff": 42.14,
-          "yahoo_ret_pct": 0.26,
-          "twse_ret_pct": 0.17
-        }
-      ],
+      "taiex_corrections": [],
       "etf_corrections": [],
       "etf_flags": [],
-      "twse_last_session": "2026-09-24"
+      "twse_last_session": null
     },
     "note": "MOVE 是美債波動, 正常晚台股 1 個交易日; curve_stale=true 表示策略 curve 還沒重生到最新交易日; data_stale=true 表示 TAIEX 落後台股(XTAI)交易日; move_stale=true 表示 ^MOVE 落後美股(XNYS)交易日(Yahoo 靜默回傳過期 bar)→ data_stale/move_stale 皆進 CI hard-fail gate, 訊號過期先別照做; suspected_closure=true 表示 stale 且 TWSE 也無該日資料(疑似臨時休市未補 market_closures.json); xcheck = TWSE 官方多源驗證(TAIEX 不符自動修正、ETF 不符 flag);xcheck.mismatch=true → ETF 對照線疑壞,人工 review"
   },
-  "generated_at": "2026-09-24T20:07:36+08:00"
+  "generated_at": "2026-09-24T22:18:34+08:00"
 }
