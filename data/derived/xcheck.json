@@ -10,14 +10,6 @@
       "pt_diff": 42.14,
       "yahoo_ret_pct": 0.26,
       "twse_ret_pct": 0.17
-    },
-    {
-      "date": "2026-09-24",
-      "old_close": 48038.27,
-      "new_close": 48024.6,
-      "pt_diff": 13.67,
-      "yahoo_ret_pct": -0.25,
-      "twse_ret_pct": -0.28
     }
   ],
   "etf_corrections": [],
