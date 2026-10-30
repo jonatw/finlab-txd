@@ -1,16 +1,10 @@
 {
   "validated": true,
   "skipped": false,
-  "twse_last_session": "2026-10-29",
+  "twse_last_session": "2026-10-30",
   "taiex_corrections": [],
   "etf_corrections": [],
   "etf_flags": [],
-  "etf_exdiv": [
-    {
-      "etf": "0056",
-      "date": "2026-10-22",
-      "div": 1.72
-    }
-  ],
+  "etf_exdiv": [],
   "mismatch": false
 }
