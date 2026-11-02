@@ -1,4 +1,4 @@
-pandas==3.0.6
+pandas==3.1.0
 numpy==2.5.4
 yfinance==1.7.0
 # scipy / scikit-learn 不是本專案直接 import 的:它們是 yfinance 的 repair=True 所需。
@@ -7,6 +7,6 @@ yfinance==1.7.0
 # tests/test_fetch_repair_deps.py(#23)守著那兩行不被刪掉。動這裡前兩處都看一下。
 scipy==1.18.1
 scikit-learn==1.9.1
-pytest==9.1.1
+pytest==9.2.0
 jsonschema==4.26.0
 exchange_calendars==4.13.2
