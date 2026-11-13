@@ -6,6 +6,18 @@
  "description": "Daily target-exposure signal for the TXD timing strategy. Research only, not advice.",
  "items": [
   {
+   "id": "2026-11-16",
+   "url": "https://txd.av8r.tw/#2026-11-16",
+   "title": "2026-11-16 — 🚨 高波動關機 / 空手(不需調倉)",
+   "content_text": "target_exposure=0.0 (prev 0.0, changed=false). spine=0.33 (站上 1/3 均線). MOVE=100.3 vs median252 73.4 → 1x. DTP pct 96.4 (高波動關機). 研究用,非投資建議。",
+   "date_published": "2026-11-16T13:30:00+08:00",
+   "_txd": {
+    "target_exposure": 0.0,
+    "changed": false,
+    "gated_next": true
+   }
+  },
+  {
    "id": "2026-11-13",
    "url": "https://txd.av8r.tw/#2026-11-13",
    "title": "2026-11-13 — 🚨 高波動關機 / 空手(不需調倉)",
@@ -710,18 +722,6 @@
    "_txd": {
     "target_exposure": 1.0,
     "changed": true,
-    "gated_next": false
-   }
-  },
-  {
-   "id": "2026-08-17",
-   "url": "https://txd.av8r.tw/#2026-08-17",
-   "title": "2026-08-17 — 台指期 2x 做多(不需調倉)",
-   "content_text": "target_exposure=2.0 (prev 2.0, changed=false). spine=1.0 (站上 3/3 均線). MOVE=69.6 vs median252 73.4 → 2x. DTP pct 78.0 (未關機). 研究用,非投資建議。",
-   "date_published": "2026-08-17T13:30:00+08:00",
-   "_txd": {
-    "target_exposure": 2.0,
-    "changed": false,
     "gated_next": false
    }
   }
